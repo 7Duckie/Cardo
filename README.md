@@ -340,7 +340,7 @@ version:
 pip install cardo
 
 # Or download the script and run directly
-curl -O https://raw.githubusercontent.com/<your-username>/cardo/main/cardo.py
+curl -O https://raw.githubusercontent.com/7Duckie/cardo/main/cardo.py
 python3 cardo.py --help
 ```
 
