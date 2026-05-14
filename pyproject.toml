@@ -93,6 +93,9 @@ select = [
 ]
 ignore = [
     "E501",   # line-too-long — handled by formatter
+    "E701",   # multiple statements on one line — used deliberately for aligned columns
+    "B007",   # unused loop variables — fine when unpacking tuples for clarity
     "B008",   # function call in argument defaults — fine for argparse helpers
+    "SIM102", # nested if statements — sometimes nesting reads clearer than combined
     "SIM108", # ternary instead of if/else — sometimes the if/else is clearer
 ]

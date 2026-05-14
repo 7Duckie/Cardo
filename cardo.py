@@ -43,7 +43,9 @@ from collections import Counter, defaultdict
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Callable, Iterable, Iterator
+from typing import Any
+from collections.abc import Callable, Iterable, Iterator
+import contextlib
 
 # tomllib is stdlib on 3.11+. Older Pythons can still run cardo — they
 # just won't be able to load a config file.
@@ -406,9 +408,8 @@ def _apply_config_defaults(args: argparse.Namespace, cfg: Config) -> None:
         if "dedupe.min_size_kb" in cfg.overrides:
             if getattr(args, "_cli_min_size_explicit", False) is False:
                 args.min_size = cfg.dedupe_min_size_kb
-        if "dedupe.workers" in cfg.overrides:
-            if getattr(args, "workers", 0) == 0:
-                args.workers = cfg.dedupe_workers
+        if "dedupe.workers" in cfg.overrides and getattr(args, "workers", 0) == 0:
+            args.workers = cfg.dedupe_workers
 
 
 def _config_init_text() -> str:
@@ -474,7 +475,7 @@ def cmd_config(args) -> int:
     if action == "init":
         if CONFIG_FILE.exists() and not args.force:
             print(f"  Config file already exists: {CONFIG_FILE}", file=sys.stderr)
-            print(f"  Use --force to overwrite.", file=sys.stderr)
+            print("  Use --force to overwrite.", file=sys.stderr)
             return 1
         try:
             CONFIG_DIR.mkdir(parents=True, exist_ok=True)
@@ -483,7 +484,7 @@ def cmd_config(args) -> int:
             print(f"✗ Could not write config: {e}", file=sys.stderr)
             return 1
         print(f"  Wrote starter config to {CONFIG_FILE}")
-        print(f"  Edit it in any text editor; all keys are optional.")
+        print("  Edit it in any text editor; all keys are optional.")
         return 0
 
     if action == "show":
@@ -614,9 +615,7 @@ def _has_vendor_like_name(folder_name: str) -> bool:
         return True
     if _VENDOR_YEAR_RE.search(folder_name):
         return True
-    if _VENDOR_VERSION_RE.search(folder_name):
-        return True
-    return False
+    return bool(_VENDOR_VERSION_RE.search(folder_name))
 
 
 def _safe_iterdir(folder: Path) -> list[Path]:
@@ -893,7 +892,8 @@ def partition_safe_protected(
     (the move command does both source and destination-parent).
     """
     if path_of is None:
-        path_of = lambda x: x  # type: ignore[assignment]
+        def path_of(x):
+            return x  # type: ignore[assignment]
 
     safe: list[Any] = []
     protected: list[tuple[Any, str]] = []
@@ -927,7 +927,8 @@ def confirm_protection_skip(
     confirmation prompt.
     """
     if path_of is None:
-        path_of = lambda x: x  # type: ignore[assignment]
+        def path_of(x):
+            return x  # type: ignore[assignment]
 
     # Show root-level warnings first (if we're operating ON an install folder)
     if root_warnings:
@@ -961,11 +962,11 @@ def confirm_protection_skip(
     if len(protected) > sample:
         print(f"      … and {len(protected) - sample:,} more")
     print()
-    print(f"  Pass --include-unsafe to override this protection (not recommended).")
+    print("  Pass --include-unsafe to override this protection (not recommended).")
     print()
 
     if safe_count == 0:
-        print(f"  Nothing safe to do — every planned action was protected. Aborting.")
+        print("  Nothing safe to do — every planned action was protected. Aborting.")
         return False
 
     print(f"  {command} will proceed with {safe_count:,} safe action(s) and "
@@ -1267,17 +1268,13 @@ class UndoLog:
         no point keeping empty undo logs around to clutter `undo --list`."""
         if self._file is None:
             return
-        try:
+        with contextlib.suppress(OSError):
             self._file.close()
-        except OSError:
-            pass
         self._file = None
         if not self.entries:
             # Empty undo log — drop it.
-            try:
+            with contextlib.suppress(OSError):
                 self.path.unlink()
-            except OSError:
-                pass
             return
         # Rewrite header in place to update `completed`. JSONL doesn't
         # support seek-and-overwrite cleanly across line lengths, so we
@@ -1470,7 +1467,7 @@ class RunSummary:
             print(f"    ✗ Failed:    {len(self.failed)}")
             # Group failures so a flood of identical errors collapses.
             reasons = Counter(reason for _, reason in self.failed)
-            print(f"    Failure breakdown:")
+            print("    Failure breakdown:")
             for reason, count in reasons.most_common():
                 label = reason if len(reason) <= 70 else reason[:67] + "…"
                 print(f"      ({count}×) {label}")
@@ -1478,7 +1475,7 @@ class RunSummary:
             print(f"  Log file: {self._log_file.name}")
         if self.undo is not None and self.undo.entries and self.undo.path.exists():
             print(f"  Undo log: {self.undo.path}")
-            print(f"  Reverse with: cardo undo")
+            print("  Reverse with: cardo undo")
         print("  " + "─" * 48)
 
     def close(self) -> None:
@@ -1958,17 +1955,16 @@ def _run_copy_or_move(args, *, verb: str, gerund: str, op_key: str,
                 safe_plan.append(entry)
 
         skipped_protected = protected
-        if protected or root_warnings:
-            if not confirm_protection_skip(
-                op_key,
-                safe_count=len(safe_plan),
-                protected=protected,
-                path_of=lambda entry: entry[0],
-                assume_yes=args.yes,
-                dry_run=args.dry_run,
-                root_warnings=root_warnings,
-            ):
-                return 0
+        if (protected or root_warnings) and not confirm_protection_skip(
+            op_key,
+            safe_count=len(safe_plan),
+            protected=protected,
+            path_of=lambda entry: entry[0],
+            assume_yes=args.yes,
+            dry_run=args.dry_run,
+            root_warnings=root_warnings,
+        ):
+            return 0
         plan = safe_plan
         total_files = len(plan)
         total_bytes = sum(size for _, _, size in plan)
@@ -2084,17 +2080,16 @@ def cmd_rename(args) -> int:
             plan, install_folders, path_of=lambda entry: entry[0]
         )
         skipped_protected = protected
-        if protected or root_warnings:
-            if not confirm_protection_skip(
-                "rename",
-                safe_count=len(safe_plan),
-                protected=protected,
-                path_of=lambda entry: entry[0],
-                assume_yes=args.yes,
-                dry_run=args.dry_run,
-                root_warnings=root_warnings,
-            ):
-                return 0
+        if (protected or root_warnings) and not confirm_protection_skip(
+            "rename",
+            safe_count=len(safe_plan),
+            protected=protected,
+            path_of=lambda entry: entry[0],
+            assume_yes=args.yes,
+            dry_run=args.dry_run,
+            root_warnings=root_warnings,
+        ):
+            return 0
         plan = safe_plan
 
     summary = RunSummary("rename", resolve_log_path(args))
@@ -2184,7 +2179,7 @@ def _dedupe_quick(args, root: Path) -> int:
     total_suspect_files = sum(len(v) - 1 for _, v in suspects)
     potential_savings = sum(k[0] * (len(v) - 1) for k, v in suspects)
 
-    print(f"\n  ─── Quick scan results ───")
+    print("\n  ─── Quick scan results ───")
     print(f"  Found {len(suspects):,} suspect set(s) by name + size match.")
     print(f"  Potential space if all suspects were real duplicates: "
           f"{human_size(potential_savings)} across {total_suspect_files:,} files.\n")
@@ -2456,7 +2451,7 @@ def _dedupe_report_advisory(advisory_groups: list[list[Path]]) -> None:
         (st.st_size if (st := safe_stat(g[0])) else 0) * (len(g) - 1)
         for g in advisory_groups
     )
-    print(f"\n  ─── Advisory: duplicate installer/package files ───")
+    print("\n  ─── Advisory: duplicate installer/package files ───")
     print(f"  Found {len(advisory_groups)} set(s) — {human_size(adv_wasted)} "
           f"of redundant installers. NOT auto-deleted; review and remove manually.")
     for i, group in enumerate(advisory_groups, start=1):
@@ -2471,10 +2466,10 @@ def _dedupe_report_advisory(advisory_groups: list[list[Path]]) -> None:
 
 def ask_deletion_mode(total_victims: int) -> str:
     """Ask the user how to handle deletions. Returns 'bulk', 'per-file', or 'cancel'."""
-    print(f"\n  How would you like to proceed?")
+    print("\n  How would you like to proceed?")
     print(f"    1. Delete all {total_victims:,} duplicates now (one confirmation)")
-    print(f"    2. Confirm each deletion individually")
-    print(f"    3. Cancel — don't delete anything")
+    print("    2. Confirm each deletion individually")
+    print("    3. Cancel — don't delete anything")
     while True:
         try:
             choice = input("  Choose [1/2/3]: ").strip()
@@ -2507,11 +2502,11 @@ def _dedupe_execute(normal_groups: list[list[Path]], total_victims: int,
 
     paranoid = getattr(args, "mode", "standard") == "paranoid"
     if paranoid:
-        print(f"\n  Paranoid mode: each deletion will be confirmed by "
-              f"byte-by-byte comparison with the keeper.")
+        print("\n  Paranoid mode: each deletion will be confirmed by "
+              "byte-by-byte comparison with the keeper.")
     use_trash = bool(getattr(args, "trash", False))
     if use_trash:
-        print(f"  Trash mode: removals go to the OS trash (recoverable).")
+        print("  Trash mode: removals go to the OS trash (recoverable).")
 
     # User-facing verb for prompts and log entries — kept consistent everywhere.
     action_verb = "TRASH" if use_trash else "DELETE"
@@ -2828,16 +2823,15 @@ def cmd_organize(args) -> int:
         )
         safe_plan, protected = partition_safe_protected(to_move, install_folders)
         skipped_protected = protected
-        if protected or root_warnings:
-            if not confirm_protection_skip(
-                "organize",
-                safe_count=len(safe_plan),
-                protected=protected,
-                assume_yes=args.yes,
-                dry_run=args.dry_run,
-                root_warnings=root_warnings,
-            ):
-                return 0
+        if (protected or root_warnings) and not confirm_protection_skip(
+            "organize",
+            safe_count=len(safe_plan),
+            protected=protected,
+            assume_yes=args.yes,
+            dry_run=args.dry_run,
+            root_warnings=root_warnings,
+        ):
+            return 0
         to_move = safe_plan
 
     summary = RunSummary("organize", resolve_log_path(args))
@@ -3042,23 +3036,22 @@ def cmd_clean(args) -> int:
         )
         safe_plan, protected = partition_safe_protected(plan, install_folders)
         skipped_protected = protected
-        if protected or root_warnings:
-            if not confirm_protection_skip(
-                "clean",
-                safe_count=len(safe_plan),
-                protected=protected,
-                assume_yes=args.yes,
-                dry_run=args.dry_run,
-                root_warnings=root_warnings,
-            ):
-                return 0
+        if (protected or root_warnings) and not confirm_protection_skip(
+            "clean",
+            safe_count=len(safe_plan),
+            protected=protected,
+            assume_yes=args.yes,
+            dry_run=args.dry_run,
+            root_warnings=root_warnings,
+        ):
+            return 0
         plan = safe_plan
     elif getattr(args, "include_unsafe", False):
-        print(f"  --include-unsafe: skipping protection check for managed packages.")
+        print("  --include-unsafe: skipping protection check for managed packages.")
 
     # ─── Phase 4: execute ────────────────────────────────────────────────
     if use_trash:
-        print(f"  Trash mode: empty directories go to the OS trash (recoverable).")
+        print("  Trash mode: empty directories go to the OS trash (recoverable).")
 
     action_past = "trashed" if use_trash else "removed"
 
@@ -3177,7 +3170,7 @@ def _list_undo_logs(args) -> int:
     if not logs:
         print(f"  No undo logs in {UNDO_DIR}.")
         return 0
-    print(f"  Recent runs (newest first):")
+    print("  Recent runs (newest first):")
     for i, (path, header, entries) in enumerate(logs, start=1):
         partial = header.get("undone_entries", [])
         if header.get("undone"):
@@ -3194,9 +3187,9 @@ def _list_undo_logs(args) -> int:
         print(f"        argv: {argv_str}")
         print(f"        file: {path.name}")
     print()
-    print(f"  Use `cardo undo` to reverse the most recent available run.")
-    print(f"  Use `cardo restore <file>` to selectively reverse entries from "
-          f"any run.")
+    print("  Use `cardo undo` to reverse the most recent available run.")
+    print("  Use `cardo restore <file>` to selectively reverse entries from "
+          "any run.")
     return 0
 
 
@@ -3239,7 +3232,7 @@ def cmd_undo(args) -> int:
     logs = find_recent_undo_logs()
     if not logs:
         print(f"  No undo logs in {UNDO_DIR}.")
-        print(f"  Run a reversible command first (move, rename, organize, clean).")
+        print("  Run a reversible command first (move, rename, organize, clean).")
         return 0
 
     # Find the most recent un-undone run.
@@ -3249,13 +3242,13 @@ def cmd_undo(args) -> int:
             target = (path, header, entries)
             break
     if target is None:
-        print(f"  No un-undone runs available — all recent logs are already consumed.")
-        print(f"  Use `cardo undo --list` to see the history.")
+        print("  No un-undone runs available — all recent logs are already consumed.")
+        print("  Use `cardo undo --list` to see the history.")
         return 0
 
     path, header, entries = target
     if not entries:
-        print(f"  The most recent log has no recorded actions — nothing to undo.")
+        print("  The most recent log has no recorded actions — nothing to undo.")
         _mark_undo_log_consumed(path)
         return 0
 
@@ -3267,7 +3260,7 @@ def cmd_undo(args) -> int:
         # Defensive: if undone_entries covers everything but undone flag wasn't
         # set, flip it now.
         _mark_undo_log_consumed(path)
-        print(f"  All entries in the most recent log have already been undone.")
+        print("  All entries in the most recent log have already been undone.")
         return 0
 
     cmd_label = header.get("command", "?")
@@ -3275,7 +3268,7 @@ def cmd_undo(args) -> int:
     completed = header.get("completed") or "(incomplete)"
     argv_str = " ".join(shlex.quote(a) for a in argv)
 
-    print(f"  Will undo this run:")
+    print("  Will undo this run:")
     print(f"    command:    cardo {cmd_label}")
     print(f"    argv:       {argv_str}")
     print(f"    completed:  {completed}")
@@ -3288,7 +3281,7 @@ def cmd_undo(args) -> int:
 
     if args.dry_run:
         # Show what would happen, in reverse order, then stop.
-        print(f"  Dry run — showing planned reversal:")
+        print("  Dry run — showing planned reversal:")
         for _, entry in reversed(pending):
             op = entry.get("op")
             if op in ("move", "rename"):
@@ -3300,10 +3293,9 @@ def cmd_undo(args) -> int:
         print(f"\n  {len(pending)} action(s) would be reversed.")
         return 0
 
-    if not args.yes:
-        if not confirm(f"  Reverse these {len(pending)} action(s)?"):
-            print("  Cancelled.")
-            return 0
+    if not args.yes and not confirm(f"  Reverse these {len(pending)} action(s)?"):
+        print("  Cancelled.")
+        return 0
 
     summary = RunSummary(f"undo-{cmd_label}", resolve_log_path(args))
     # `undo` itself is not undoable — we don't attach an UndoLog. This is
@@ -3416,7 +3408,7 @@ def _restore_resolve_log(args) -> tuple[Path, dict, list[dict]] | None:
                 return (p, parsed[0], parsed[1])
         print(f"✗ Undo log not found: {log_arg}", file=sys.stderr)
         print(f"  Tried: {', '.join(str(c) for c in candidates)}", file=sys.stderr)
-        print(f"  Run `cardo undo --list` to see available logs.", file=sys.stderr)
+        print("  Run `cardo undo --list` to see available logs.", file=sys.stderr)
         return None
 
     # No path given: use the most recent log that has anything pending.
@@ -3428,8 +3420,8 @@ def _restore_resolve_log(args) -> tuple[Path, dict, list[dict]] | None:
         if any(i not in already for i in range(len(entries))):
             return (path, header, entries)
 
-    print(f"  No undo logs with pending entries. Run `cardo undo --list` "
-          f"to see history.", file=sys.stderr)
+    print("  No undo logs with pending entries. Run `cardo undo --list` "
+          "to see history.", file=sys.stderr)
     return None
 
 
@@ -3438,15 +3430,15 @@ def _restore_interactive_pick(entries: list[dict],
     """Show the entries and let the user select some by range syntax.
     Returns the list of 0-based indices to undo, or None if cancelled."""
     print()
-    print(f"  Entries (✓ = already reversed by an earlier restore):")
+    print("  Entries (✓ = already reversed by an earlier restore):")
     for i, entry in enumerate(entries, start=1):
         marker = "✓" if (i - 1) in already_done else " "
         print(f"  {marker} {i:>3}.  {_entry_describe(entry)}")
     print()
-    print(f"  Pick entries to reverse. Examples:")
-    print(f"    1-5, 8, 11-15      ranges and individual numbers")
-    print(f"    a                  all pending entries")
-    print(f"    q (or blank)       cancel")
+    print("  Pick entries to reverse. Examples:")
+    print("    1-5, 8, 11-15      ranges and individual numbers")
+    print("    a                  all pending entries")
+    print("    q (or blank)       cancel")
     while True:
         try:
             spec = input("  Selection: ").strip().lower()
@@ -3504,7 +3496,7 @@ def cmd_restore(args) -> int:
     already_done: set[int] = set(header.get("undone_entries", []))
     pending_count = sum(1 for i in range(len(entries)) if i not in already_done)
     if pending_count == 0:
-        print(f"  All entries in this log have already been reversed.")
+        print("  All entries in this log have already been reversed.")
         if not header.get("undone"):
             _mark_undo_log_consumed(path)
         return 0
@@ -3513,7 +3505,7 @@ def cmd_restore(args) -> int:
     argv_str = " ".join(shlex.quote(a) for a in header.get("argv", []))
     completed = header.get("completed") or "(incomplete)"
 
-    print(f"  Restore from undo log:")
+    print("  Restore from undo log:")
     print(f"    file:       {path.name}")
     print(f"    command:    cardo {cmd_label}")
     print(f"    argv:       {argv_str}")
@@ -3529,7 +3521,7 @@ def cmd_restore(args) -> int:
             return 2
         picked = [i for i in picked if i not in already_done]
         if not picked:
-            print(f"  Range matched nothing pending.")
+            print("  Range matched nothing pending.")
             return 0
     elif args.grep:
         picked = _restore_grep_pick(entries, args.grep, already_done)
@@ -3550,13 +3542,12 @@ def cmd_restore(args) -> int:
     print()
 
     if args.dry_run:
-        print(f"  Dry run — no changes made.")
+        print("  Dry run — no changes made.")
         return 0
 
-    if not args.yes:
-        if not confirm(f"  Proceed with {len(picked)} reversal(s)?"):
-            print("  Cancelled.")
-            return 0
+    if not args.yes and not confirm(f"  Proceed with {len(picked)} reversal(s)?"):
+        print("  Cancelled.")
+        return 0
 
     summary = RunSummary(f"restore-{cmd_label}", resolve_log_path(args))
     try:
@@ -3659,7 +3650,7 @@ def _verify_one(path: Path, cache: HashCache) -> tuple[Path, str, str | None]:
                 f"hash {entry.get('sha256','?')[:12]}… → {new_hash[:12]}… "
                 f"(size & mtime unchanged)")
     return (path, "modified",
-            f"hash differs and metadata changed since last seen")
+            "hash differs and metadata changed since last seen")
 
 
 def cmd_verify(args) -> int:
@@ -3775,29 +3766,29 @@ def cmd_verify(args) -> int:
     # Always show details for the alarming categories.
     if corrupted:
         print()
-        print(f"  ⚠ Files whose CONTENTS changed despite unchanged metadata:")
-        print(f"  This usually indicates disk corruption, bit-rot, or an attack.")
+        print("  ⚠ Files whose CONTENTS changed despite unchanged metadata:")
+        print("  This usually indicates disk corruption, bit-rot, or an attack.")
         for path, detail in corrupted:
             print(f"      {path}")
             if detail:
                 print(f"        {detail}")
     if unreadable:
         print()
-        print(f"  Files that could not be hashed:")
+        print("  Files that could not be hashed:")
         for path, detail in unreadable[:20]:
             print(f"      {path}  ({detail})")
         if len(unreadable) > 20:
             print(f"      … and {len(unreadable) - 20} more")
     if modified_count and args.show_modified:
         print()
-        print(f"  Files modified since last cached:")
+        print("  Files modified since last cached:")
         for path, _ in by_status["modified"][:20]:
             print(f"      {path}")
         if modified_count > 20:
             print(f"      … and {modified_count - 20} more")
     if orphans and args.show_missing:
         print()
-        print(f"  Files in cache but missing from disk:")
+        print("  Files in cache but missing from disk:")
         for path in orphans[:20]:
             print(f"      {path}")
         if len(orphans) > 20:
@@ -3974,13 +3965,13 @@ def cmd_sync(args) -> int:
     # src (or vice versa) — would either delete the source or recurse forever.
     try:
         src.relative_to(dst)
-        print(f"✗ Source is inside destination — refusing to sync.", file=sys.stderr)
+        print("✗ Source is inside destination — refusing to sync.", file=sys.stderr)
         return 1
     except ValueError:
         pass
     try:
         dst.relative_to(src)
-        print(f"✗ Destination is inside source — refusing to sync.", file=sys.stderr)
+        print("✗ Destination is inside source — refusing to sync.", file=sys.stderr)
         return 1
     except ValueError:
         pass
@@ -4025,7 +4016,7 @@ def cmd_sync(args) -> int:
             total_bytes += st.st_size
 
     print()
-    print(f"  ─── Sync plan ───")
+    print("  ─── Sync plan ───")
     print(f"    Copy new:     {len(copies):,}")
     print(f"    Update:       {len(updates):,}")
     print(f"    Up-to-date:   {len(skips):,}")
@@ -4074,17 +4065,16 @@ def cmd_sync(args) -> int:
             else:
                 safe.append(entry)
 
-        if protected or root_warnings:
-            if not confirm_protection_skip(
-                "sync",
-                safe_count=len(safe),
-                protected=protected,
-                path_of=lambda entry: entry[1],
-                assume_yes=args.yes,
-                dry_run=args.dry_run,
-                root_warnings=root_warnings,
-            ):
-                return 0
+        if (protected or root_warnings) and not confirm_protection_skip(
+            "sync",
+            safe_count=len(safe),
+            protected=protected,
+            path_of=lambda entry: entry[1],
+            assume_yes=args.yes,
+            dry_run=args.dry_run,
+            root_warnings=root_warnings,
+        ):
+            return 0
         actionable_plan = safe
         copies  = [e for e in safe if e[0] == _SYNC_COPY]
         updates = [e for e in safe if e[0] == _SYNC_UPDATE]
@@ -4114,7 +4104,7 @@ def cmd_sync(args) -> int:
 
     # ─── Execute ─────────────────────────────────────────────────────
     if use_trash and deletes:
-        print(f"  Trash mode: extras go to the OS trash (recoverable).")
+        print("  Trash mode: extras go to the OS trash (recoverable).")
 
     summary = RunSummary("sync", resolve_log_path(args))
     maybe_attach_undo(summary, args)
@@ -4516,10 +4506,8 @@ def main(argv: list[str] | None = None) -> int:
         return 130
     except BrokenPipeError:
         # User piped to head/less and closed early — exit silently.
-        try:
+        with contextlib.suppress(BrokenPipeError):
             sys.stdout.close()
-        except BrokenPipeError:
-            pass
         return 0
 
 
