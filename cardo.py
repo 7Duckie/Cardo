@@ -51,6 +51,7 @@ import contextlib
 # just won't be able to load a config file.
 try:
     import tomllib  # type: ignore[import-not-found]
+
     _TOML_AVAILABLE = True
 except ImportError:
     tomllib = None  # type: ignore[assignment]
@@ -60,6 +61,7 @@ except ImportError:
 # permanent-delete behavior is unaffected. Install with `pip install send2trash`.
 try:
     from send2trash import send2trash as _send2trash_impl
+
     _TRASH_AVAILABLE = True
 except ImportError:
     _send2trash_impl = None  # type: ignore[assignment]
@@ -71,18 +73,41 @@ except ImportError:
 # ──────────────────────────────────────────────────────────────────────────
 
 CATEGORIES: dict[str, set[str]] = {
-    "Images":    {".jpg", ".jpeg", ".png", ".gif", ".bmp", ".webp", ".svg", ".heic", ".tiff", ".ico"},
-    "Videos":    {".mp4", ".mov", ".avi", ".mkv", ".webm", ".flv", ".wmv", ".m4v"},
-    "Audio":     {".mp3", ".wav", ".flac", ".aac", ".ogg", ".m4a", ".wma", ".opus"},
+    "Images": {".jpg", ".jpeg", ".png", ".gif", ".bmp", ".webp", ".svg", ".heic", ".tiff", ".ico"},
+    "Videos": {".mp4", ".mov", ".avi", ".mkv", ".webm", ".flv", ".wmv", ".m4v"},
+    "Audio": {".mp3", ".wav", ".flac", ".aac", ".ogg", ".m4a", ".wma", ".opus"},
     "Documents": {".pdf", ".doc", ".docx", ".odt", ".rtf", ".tex", ".md", ".txt", ".epub"},
-    "Sheets":    {".xls", ".xlsx", ".ods", ".csv", ".tsv"},
-    "Slides":    {".ppt", ".pptx", ".odp", ".key"},
-    "Archives":  {".zip", ".tar", ".gz", ".bz2", ".xz", ".7z", ".rar", ".tgz"},
-    "Code":      {".py", ".js", ".ts", ".jsx", ".tsx", ".java", ".c", ".cpp", ".h",
-                  ".hpp", ".rs", ".go", ".rb", ".php", ".sh", ".html", ".css", ".scss",
-                  ".sql", ".yaml", ".yml", ".json", ".toml", ".xml"},
-    "Fonts":     {".ttf", ".otf", ".woff", ".woff2"},
-    "Installers":{".exe", ".msi", ".dmg", ".pkg", ".deb", ".rpm", ".apk"},
+    "Sheets": {".xls", ".xlsx", ".ods", ".csv", ".tsv"},
+    "Slides": {".ppt", ".pptx", ".odp", ".key"},
+    "Archives": {".zip", ".tar", ".gz", ".bz2", ".xz", ".7z", ".rar", ".tgz"},
+    "Code": {
+        ".py",
+        ".js",
+        ".ts",
+        ".jsx",
+        ".tsx",
+        ".java",
+        ".c",
+        ".cpp",
+        ".h",
+        ".hpp",
+        ".rs",
+        ".go",
+        ".rb",
+        ".php",
+        ".sh",
+        ".html",
+        ".css",
+        ".scss",
+        ".sql",
+        ".yaml",
+        ".yml",
+        ".json",
+        ".toml",
+        ".xml",
+    },
+    "Fonts": {".ttf", ".otf", ".woff", ".woff2"},
+    "Installers": {".exe", ".msi", ".dmg", ".pkg", ".deb", ".rpm", ".apk"},
 }
 
 # Flat reverse lookup, rebuilt whenever CATEGORIES is extended via config.
@@ -193,10 +218,12 @@ def trash_or_warn_if_requested(args) -> tuple[bool, str | None]:
     if not use_trash:
         return (False, None)
     if not _TRASH_AVAILABLE:
-        return (False,
-                "✗ --trash was requested but `send2trash` is not installed.\n"
-                "  Install it with:  pip install send2trash\n"
-                "  Or omit --trash to permanently delete instead.")
+        return (
+            False,
+            "✗ --trash was requested but `send2trash` is not installed.\n"
+            "  Install it with:  pip install send2trash\n"
+            "  Or omit --trash to permanently delete instead.",
+        )
     return (True, None)
 
 
@@ -237,16 +264,17 @@ class Config:
     The Config instance is built once in main() and consulted as the CLI
     flags are processed: see _apply_config_defaults().
     """
+
     # [defaults]
     assume_yes: bool = False
-    report:     bool = False
-    log:        bool = False
-    trash:      bool = False
+    report: bool = False
+    log: bool = False
+    trash: bool = False
 
     # [dedupe]
-    dedupe_mode:        str = "standard"
+    dedupe_mode: str = "standard"
     dedupe_min_size_kb: int = 4
-    dedupe_workers:     int = 0
+    dedupe_workers: int = 0
 
     # [categories] — merged into the global CATEGORIES at load time.
     extra_categories: dict[str, list[str]] = field(default_factory=dict)
@@ -267,8 +295,11 @@ def _coerce(value: Any, kind: type, key: str) -> Any:
     fall back to the default rather than crashing."""
     if isinstance(value, kind):
         return value
-    print(f"  ! config: {key} should be {kind.__name__}, got "
-          f"{type(value).__name__} ({value!r}) — ignoring.", file=sys.stderr)
+    print(
+        f"  ! config: {key} should be {kind.__name__}, got "
+        f"{type(value).__name__} ({value!r}) — ignoring.",
+        file=sys.stderr,
+    )
     return None
 
 
@@ -282,9 +313,11 @@ def load_config(path: Path = CONFIG_FILE) -> Config:
     if not path.exists():
         return cfg
     if not _TOML_AVAILABLE:
-        print(f"  ! config: {path} exists but Python {sys.version_info.major}."
-              f"{sys.version_info.minor} has no tomllib (needs 3.11+). Ignoring.",
-              file=sys.stderr)
+        print(
+            f"  ! config: {path} exists but Python {sys.version_info.major}."
+            f"{sys.version_info.minor} has no tomllib (needs 3.11+). Ignoring.",
+            file=sys.stderr,
+        )
         return cfg
     try:
         with path.open("rb") as f:
@@ -302,9 +335,9 @@ def load_config(path: Path = CONFIG_FILE) -> Config:
     defaults = data.get("defaults", {}) or {}
     for key, attr, kind in (
         ("assume_yes", "assume_yes", bool),
-        ("report",     "report",     bool),
-        ("log",        "log",        bool),
-        ("trash",      "trash",      bool),
+        ("report", "report", bool),
+        ("log", "log", bool),
+        ("trash", "trash", bool),
     ):
         if key in defaults:
             coerced = _coerce(defaults[key], kind, f"defaults.{key}")
@@ -320,8 +353,11 @@ def load_config(path: Path = CONFIG_FILE) -> Config:
             cfg.dedupe_mode = val
             cfg.overrides["dedupe.mode"] = val
         elif val is not None:
-            print(f"  ! config: dedupe.mode must be quick/standard/paranoid "
-                  f"(got {val!r}) — ignoring.", file=sys.stderr)
+            print(
+                f"  ! config: dedupe.mode must be quick/standard/paranoid "
+                f"(got {val!r}) — ignoring.",
+                file=sys.stderr,
+            )
     if "min_size_kb" in dedupe:
         val = _coerce(dedupe["min_size_kb"], int, "dedupe.min_size_kb")
         if val is not None and val >= 0:
@@ -337,8 +373,10 @@ def load_config(path: Path = CONFIG_FILE) -> Config:
     cats = data.get("categories", {}) or {}
     for name, exts in cats.items():
         if not isinstance(exts, list) or not all(isinstance(e, str) for e in exts):
-            print(f"  ! config: categories.{name} must be a list of strings — "
-                  f"ignoring.", file=sys.stderr)
+            print(
+                f"  ! config: categories.{name} must be a list of strings — ignoring.",
+                file=sys.stderr,
+            )
             continue
         # Normalize: lowercase, leading dot
         normalized = []
@@ -383,15 +421,12 @@ def _apply_config_defaults(args: argparse.Namespace, cfg: Config) -> None:
     # [defaults] apply to every command that has the matching attribute.
     if cfg.assume_yes and getattr(args, "yes", False) is False:
         args.yes = True
-    if cfg.report and getattr(args, "report", False) is False \
-            and hasattr(args, "report"):
+    if cfg.report and getattr(args, "report", False) is False and hasattr(args, "report"):
         args.report = True
-    if cfg.log and getattr(args, "log", None) is None \
-            and hasattr(args, "log"):
+    if cfg.log and getattr(args, "log", None) is None and hasattr(args, "log"):
         # Empty string is argparse's "--log with no value" sentinel.
         args.log = ""
-    if cfg.trash and getattr(args, "trash", False) is False \
-            and hasattr(args, "trash"):
+    if cfg.trash and getattr(args, "trash", False) is False and hasattr(args, "trash"):
         args.trash = True
 
     # [dedupe] section only matters for the dedupe command.
@@ -527,10 +562,17 @@ def cmd_config(args) -> int:
 # application manages — never delete byte-duplicates from inside these."
 UNSAFE_PATH_SEGMENTS = (
     # macOS app/framework/bundle internals
-    ".app", ".framework", ".bundle", ".kext", ".plugin", ".xpc",
+    ".app",
+    ".framework",
+    ".bundle",
+    ".kext",
+    ".plugin",
+    ".xpc",
     ".lproj",  # localization bundles inside apps
     # Lightroom catalog & preview data
-    ".lrcat-data", ".lrdata", ".lrlibrary",
+    ".lrcat-data",
+    ".lrdata",
+    ".lrlibrary",
     # Photos library
     ".photoslibrary",
 )
@@ -538,28 +580,32 @@ UNSAFE_PATH_SEGMENTS = (
 # Big files (installers, disk images) — duplicates indicate "you have the same
 # installer in two places". Reported but not auto-deleted.
 ADVISORY_EXTENSIONS = {
-    ".pkg", ".mpkg",   # macOS installer packages
-    ".dmg",            # disk images
-    ".iso",            # disc images
-    ".exe", ".msi",    # Windows installers
-    ".deb", ".rpm",    # Linux packages
-    ".apk", ".ipa",    # mobile app packages
+    ".pkg",
+    ".mpkg",  # macOS installer packages
+    ".dmg",  # disk images
+    ".iso",  # disc images
+    ".exe",
+    ".msi",  # Windows installers
+    ".deb",
+    ".rpm",  # Linux packages
+    ".apk",
+    ".ipa",  # mobile app packages
 }
 
 # Specific filenames that look identical by content but each belongs to its
 # own context.
 UNSAFE_FILENAMES = {
-    ".DS_Store",          # macOS Finder metadata, one per folder
-    "LOCK",               # Lightroom catalog lock files
-    "Thumbs.db",          # Windows thumbnail cache
-    ".localized",         # macOS localization marker
-    "desktop.ini",        # Windows folder metadata
+    ".DS_Store",  # macOS Finder metadata, one per folder
+    "LOCK",  # Lightroom catalog lock files
+    "Thumbs.db",  # Windows thumbnail cache
+    ".localized",  # macOS localization marker
+    "desktop.ini",  # Windows folder metadata
 }
 
 # Filename suffixes/patterns that are unsafe.
 UNSAFE_FILENAME_PATTERNS = (
-    ".log",               # transaction logs, debug logs — keep them in place
-    ".lock",              # generic lock files
+    ".log",  # transaction logs, debug logs — keep them in place
+    ".lock",  # generic lock files
 )
 
 # ─── Installation-folder detection ─────────────────────────────────────────
@@ -567,42 +613,99 @@ UNSAFE_FILENAME_PATTERNS = (
 # Maxon C4D, JetBrains, Unity, etc). Detected by combining several signals.
 
 INSTALL_FOLDER_CHILD_HINTS = {
-    "presets", "resources", "resource", "plug-ins", "plugins", "frameworks",
-    "library", "libraries", "lib", "bin", "share", "locale",
-    "help", "documentation", "configuration", "components",
-    "exchange plugins", "scripts", "templates", "modules",
-    "support files", "supportfiles",
+    "presets",
+    "resources",
+    "resource",
+    "plug-ins",
+    "plugins",
+    "frameworks",
+    "library",
+    "libraries",
+    "lib",
+    "bin",
+    "share",
+    "locale",
+    "help",
+    "documentation",
+    "configuration",
+    "components",
+    "exchange plugins",
+    "scripts",
+    "templates",
+    "modules",
+    "support files",
+    "supportfiles",
 }
 
 INSTALL_FOLDER_FILE_HINTS = {
-    "license.txt", "license.rtf", "license.md", "license",
-    "notice.txt", "notice.rtf", "notice",
-    "readme.txt", "readme.rtf", "readme",
-    "version.txt", "version", ".version",
-    "info.plist", "third_party_notices.txt", "third-party-notices.txt",
-    "uninstall.sh", "uninstaller", "uninstall.exe",
-    "install.log", "installation.log",
-    "eula.txt", "eula.rtf", "eula",
+    "license.txt",
+    "license.rtf",
+    "license.md",
+    "license",
+    "notice.txt",
+    "notice.rtf",
+    "notice",
+    "readme.txt",
+    "readme.rtf",
+    "readme",
+    "version.txt",
+    "version",
+    ".version",
+    "info.plist",
+    "third_party_notices.txt",
+    "third-party-notices.txt",
+    "uninstall.sh",
+    "uninstaller",
+    "uninstall.exe",
+    "install.log",
+    "installation.log",
+    "eula.txt",
+    "eula.rtf",
+    "eula",
 }
 
 INSTALL_FOLDER_BINARY_EXTS = {
-    ".dylib", ".so", ".dll",       # native shared libraries
-    ".jar",                         # Java archives
-    ".pak", ".pack",                # binary asset bundles
-    ".node",                        # Node native modules
-    ".framework",                   # macOS framework folders
-    ".plist",                       # macOS property lists
+    ".dylib",
+    ".so",
+    ".dll",  # native shared libraries
+    ".jar",  # Java archives
+    ".pak",
+    ".pack",  # binary asset bundles
+    ".node",  # Node native modules
+    ".framework",  # macOS framework folders
+    ".plist",  # macOS property lists
 }
 
 INSTALL_FOLDER_REVERSE_DNS_PREFIXES = (
-    "com.", "net.", "org.", "io.", "co.", "uk.", "de.", "fr.",
+    "com.",
+    "net.",
+    "org.",
+    "io.",
+    "co.",
+    "uk.",
+    "de.",
+    "fr.",
 )
 
 _VENDOR_PREFIXES = (
-    "adobe ", "maxon ", "autodesk ", "microsoft ", "apple ",
-    "blackmagic ", "avid ", "steinberg ", "ableton ", "native instruments ",
-    "jetbrains ", "unity ", "unreal ", "houdini", "blender ", "redshift ",
-    "marvelous designer ", "zbrush",
+    "adobe ",
+    "maxon ",
+    "autodesk ",
+    "microsoft ",
+    "apple ",
+    "blackmagic ",
+    "avid ",
+    "steinberg ",
+    "ableton ",
+    "native instruments ",
+    "jetbrains ",
+    "unity ",
+    "unreal ",
+    "houdini",
+    "blender ",
+    "redshift ",
+    "marvelous designer ",
+    "zbrush",
 )
 _VENDOR_YEAR_RE = re.compile(r"\b(19|20)\d{2}\b")
 _VENDOR_VERSION_RE = re.compile(r"\b(v?\d+(\.\d+)+)\b")
@@ -642,16 +745,18 @@ def looks_like_install_folder(folder: Path, max_probe: int = 200) -> tuple[bool,
         return (False, [])
 
     # Signal 1: telltale child folder names
-    folder_hits = [c.name for c in children
-                   if c.is_dir() and c.name.lower() in INSTALL_FOLDER_CHILD_HINTS]
+    folder_hits = [
+        c.name for c in children if c.is_dir() and c.name.lower() in INSTALL_FOLDER_CHILD_HINTS
+    ]
     if folder_hits:
         names = ", ".join(folder_hits[:3])
         more = f" + {len(folder_hits) - 3} more" if len(folder_hits) > 3 else ""
         evidence.append(f"contains app-style subfolders: {names}{more}")
 
     # Signal 2: vendor marker files
-    file_hits = [c.name for c in children
-                 if c.is_file() and c.name.lower() in INSTALL_FOLDER_FILE_HINTS]
+    file_hits = [
+        c.name for c in children if c.is_file() and c.name.lower() in INSTALL_FOLDER_FILE_HINTS
+    ]
     if file_hits:
         evidence.append(f"vendor files present: {', '.join(file_hits[:3])}")
 
@@ -662,9 +767,7 @@ def looks_like_install_folder(folder: Path, max_probe: int = 200) -> tuple[bool,
     # Signal 4: binary library files in folder or one level down
     binary_count = _count_binaries(children, threshold=5)
     if binary_count >= 5:
-        evidence.append(
-            f"contains {binary_count}+ binary library files (.dylib/.so/.dll)"
-        )
+        evidence.append(f"contains {binary_count}+ binary library files (.dylib/.so/.dll)")
 
     if len(evidence) >= 2:
         return (True, evidence)
@@ -807,6 +910,7 @@ def is_unsafe_to_dedupe(path: Path) -> str | None:
 # one confirmation. `--include-unsafe` opts out entirely (matches dedupe).
 # ──────────────────────────────────────────────────────────────────────────
 
+
 def is_protected_path(path: Path, install_folders: set[Path]) -> tuple[bool, str | None]:
     """Return (is_protected, reason) for `path`.
 
@@ -842,7 +946,9 @@ def is_protected_path(path: Path, install_folders: set[Path]) -> tuple[bool, str
     return (False, None)
 
 
-def detect_install_folders_with_root_check(root: Path, recursive: bool) -> tuple[set[Path], list[str]]:
+def detect_install_folders_with_root_check(
+    root: Path, recursive: bool
+) -> tuple[set[Path], list[str]]:
     """Wrapper around find_install_folders() that also checks whether `root`
     itself looks like an install folder.
 
@@ -864,8 +970,7 @@ def detect_install_folders_with_root_check(root: Path, recursive: bool) -> tuple
     if is_install:
         install.add(root)
         warnings.append(
-            f"the folder you specified ({root}) itself looks like an installed "
-            f"application:"
+            f"the folder you specified ({root}) itself looks like an installed application:"
         )
         for ev in evidence:
             warnings.append(f"  — {ev}")
@@ -892,6 +997,7 @@ def partition_safe_protected(
     (the move command does both source and destination-parent).
     """
     if path_of is None:
+
         def path_of(x):
             return x  # type: ignore[assignment]
 
@@ -927,6 +1033,7 @@ def confirm_protection_skip(
     confirmation prompt.
     """
     if path_of is None:
+
         def path_of(x):
             return x  # type: ignore[assignment]
 
@@ -945,13 +1052,17 @@ def confirm_protection_skip(
         by_reason[reason] += 1
 
     print()
-    print(f"  ⚠ Protection: skipping {len(protected):,} action(s) that would "
-          f"touch installed-application content:")
+    print(
+        f"  ⚠ Protection: skipping {len(protected):,} action(s) that would "
+        f"touch installed-application content:"
+    )
     for reason, count in sorted(by_reason.items(), key=lambda x: -x[1])[:6]:
         print(f"      {count:>6,}× {reason}")
     if len(by_reason) > 6:
-        print(f"      … and {len(by_reason) - 6} other categor"
-              f"{'ies' if len(by_reason) - 6 > 1 else 'y'}")
+        print(
+            f"      … and {len(by_reason) - 6} other categor"
+            f"{'ies' if len(by_reason) - 6 > 1 else 'y'}"
+        )
 
     # Show a handful of example paths so the user can verify the protection
     # is doing the right thing, without flooding the terminal.
@@ -969,8 +1080,10 @@ def confirm_protection_skip(
         print("  Nothing safe to do — every planned action was protected. Aborting.")
         return False
 
-    print(f"  {command} will proceed with {safe_count:,} safe action(s) and "
-          f"skip the {len(protected):,} protected one(s).")
+    print(
+        f"  {command} will proceed with {safe_count:,} safe action(s) and "
+        f"skip the {len(protected):,} protected one(s)."
+    )
 
     if dry_run or assume_yes:
         return True
@@ -1150,6 +1263,7 @@ def is_admin() -> bool:
     except AttributeError:
         try:
             import ctypes
+
             return bool(ctypes.windll.shell32.IsUserAnAdmin())  # type: ignore[attr-defined]
         except Exception:
             return False
@@ -1187,8 +1301,9 @@ def require_admin_if_needed(command: str, paths: list[Path]) -> bool:
         return True
 
     print("✗ This operation needs administrator privileges.", file=sys.stderr)
-    print("  The following path(s) are owned by another user and not world-writable:",
-          file=sys.stderr)
+    print(
+        "  The following path(s) are owned by another user and not world-writable:", file=sys.stderr
+    )
     for p in risky:
         print(f"    {p}", file=sys.stderr)
     invocation = " ".join(sys.argv)
@@ -1234,14 +1349,16 @@ class UndoLog:
             self._file = self.path.open("w", encoding="utf-8")
             # Header line so the file is self-describing without parsing
             # every entry.
-            self._write_line({
-                "_meta": True,
-                "command": command,
-                "argv": argv,
-                "started": self.started,
-                "completed": None,
-                "undone": False,
-            })
+            self._write_line(
+                {
+                    "_meta": True,
+                    "command": command,
+                    "argv": argv,
+                    "started": self.started,
+                    "completed": None,
+                    "undone": False,
+                }
+            )
         except OSError as e:
             print(f"  ! Could not open undo log: {e}", file=sys.stderr)
             self._file = None
@@ -1317,8 +1434,7 @@ def _mark_undo_log_consumed(path: Path) -> bool:
     )
 
 
-def _mark_entries_consumed(path: Path, indices: list[int],
-                            total_entries: int) -> bool:
+def _mark_entries_consumed(path: Path, indices: list[int], total_entries: int) -> bool:
     """Mark specific entry indices as already-undone. If all entries are now
     consumed, also flip the full `undone` flag so the log behaves the same
     as a fully-undone one for `cardo undo` / `cardo undo --list`."""
@@ -1361,10 +1477,9 @@ def find_recent_undo_logs(limit: int = 20) -> list[tuple[Path, dict, list[dict]]
     Skips files we can't parse so the list stays useful."""
     if not UNDO_DIR.exists():
         return []
-    candidates = sorted(UNDO_DIR.glob("*.jsonl"), key=lambda p: p.stat().st_mtime,
-                        reverse=True)
+    candidates = sorted(UNDO_DIR.glob("*.jsonl"), key=lambda p: p.stat().st_mtime, reverse=True)
     out: list[tuple[Path, dict, list[dict]]] = []
-    for p in candidates[:limit * 2]:  # over-fetch in case some don't parse
+    for p in candidates[: limit * 2]:  # over-fetch in case some don't parse
         parsed = _read_undo_log(p)
         if parsed is None:
             continue
@@ -1481,9 +1596,7 @@ class RunSummary:
     def close(self) -> None:
         if self._log_file is not None:
             try:
-                self._log_file.write(
-                    f"=== End ({humantime(time.monotonic() - self.start)}) ===\n"
-                )
+                self._log_file.write(f"=== End ({humantime(time.monotonic() - self.start)}) ===\n")
                 self._log_file.close()
             except OSError:
                 pass
@@ -1495,8 +1608,8 @@ class RunSummary:
 
 def resolve_log_path(args) -> Path | None:
     """--log         → timestamped name in default location
-       --log PATH    → that exact file
-       (no --log)    → no logging"""
+    --log PATH    → that exact file
+    (no --log)    → no logging"""
     log_arg = getattr(args, "log", None)
     if log_arg is None:
         return None
@@ -1530,30 +1643,33 @@ def maybe_attach_undo(summary: RunSummary, args) -> None:
 # Preflight estimation + progress bar
 # ──────────────────────────────────────────────────────────────────────────
 
+
 @dataclass(frozen=True)
 class OpProfile:
     """Per-operation throughput model. Bytes-per-sec for the byte component
     plus a fixed per-file overhead in seconds for the metadata component."""
+
     label: str
     bytes_per_sec: int
     per_file_overhead: float
 
+
 _GB = 1024 * 1024 * 1024
-_HIGH = 10 * _GB   # for metadata-only ops, byte rate is effectively infinite
+_HIGH = 10 * _GB  # for metadata-only ops, byte rate is effectively infinite
 
 # Single source of truth: replaces THROUGHPUT + PER_FILE_OVERHEAD + label dict.
 OP_PROFILES: dict[str, OpProfile] = {
-    "copy":       OpProfile("copy",          80 * 1024 * 1024, 0.005),
-    "move":       OpProfile("move",         200 * 1024 * 1024, 0.001),
-    "hash":       OpProfile("dedupe (hash)",250 * 1024 * 1024, 0.002),
-    "scan":       OpProfile("scan",         500 * 1024 * 1024, 0.0005),
-    "rename":     OpProfile("rename",       _HIGH,             0.001),
-    "search":     OpProfile("search",       _HIGH,             0.0003),
-    "tree":       OpProfile("tree",         _HIGH,             0.0003),
-    "clean":      OpProfile("clean",        _HIGH,             0.0005),
-    "stats":      OpProfile("stats",        _HIGH,             0.0003),
-    "name-clash": OpProfile("name-clash",   _HIGH,             0.0003),
-    "organize":   OpProfile("organize",     200 * 1024 * 1024, 0.001),
+    "copy": OpProfile("copy", 80 * 1024 * 1024, 0.005),
+    "move": OpProfile("move", 200 * 1024 * 1024, 0.001),
+    "hash": OpProfile("dedupe (hash)", 250 * 1024 * 1024, 0.002),
+    "scan": OpProfile("scan", 500 * 1024 * 1024, 0.0005),
+    "rename": OpProfile("rename", _HIGH, 0.001),
+    "search": OpProfile("search", _HIGH, 0.0003),
+    "tree": OpProfile("tree", _HIGH, 0.0003),
+    "clean": OpProfile("clean", _HIGH, 0.0005),
+    "stats": OpProfile("stats", _HIGH, 0.0003),
+    "name-clash": OpProfile("name-clash", _HIGH, 0.0003),
+    "organize": OpProfile("organize", 200 * 1024 * 1024, 0.001),
 }
 
 # Skip the confirmation prompt below this estimated duration.
@@ -1594,14 +1710,16 @@ def scan_for_estimate(files: Iterable[Path]) -> tuple[int, int]:
     return count, total
 
 
-def prescan_directory(root: Path, recursive: bool = True,
-                       pattern: str | None = None) -> tuple[int, int]:
+def prescan_directory(
+    root: Path, recursive: bool = True, pattern: str | None = None
+) -> tuple[int, int]:
     """Quickly walk a tree and return (file_count, total_bytes) for estimates."""
     return scan_for_estimate(iter_files(root, recursive=recursive, pattern=pattern))
 
 
-def preflight(op: str, file_count: int, total_bytes: int, *,
-              assume_yes: bool = False, dry_run: bool = False) -> bool:
+def preflight(
+    op: str, file_count: int, total_bytes: int, *, assume_yes: bool = False, dry_run: bool = False
+) -> bool:
     """Print an estimate. For long jobs, ask the user to confirm. Returns True
     to proceed; False after printing 'Aborted.' if the user declines."""
     eta = estimate(op, file_count, total_bytes)
@@ -1666,10 +1784,12 @@ class ProgressBar:
         else:
             eta_str = "—"
         rate_str = f"{human_size(int(rate))}/s" if rate > 0 else "—/s"
-        line = (f"\r  {self.label} [{bar}] "
-                f"{self.done_files}/{self.total_files} files  "
-                f"{human_size(self.done_bytes)}/{human_size(self.total_bytes)}  "
-                f"{rate_str}  ETA {eta_str}")
+        line = (
+            f"\r  {self.label} [{bar}] "
+            f"{self.done_files}/{self.total_files} files  "
+            f"{human_size(self.done_bytes)}/{human_size(self.total_bytes)}  "
+            f"{rate_str}  ETA {eta_str}"
+        )
         sys.stderr.write(line.ljust(110))
         sys.stderr.flush()
 
@@ -1722,17 +1842,14 @@ _REPORT_CSS = """
 
 _KIND_LABELS = {
     "duplicate": "Duplicate",
-    "advisory":  "Advisory (installer/package)",
-    "suspect":   "Suspect (metadata match)",
-    "match":     "Match",
+    "advisory": "Advisory (installer/package)",
+    "suspect": "Suspect (metadata match)",
+    "match": "Match",
 }
 
 
 def _html_escape(s: str) -> str:
-    return (s.replace("&", "&amp;")
-             .replace("<", "&lt;")
-             .replace(">", "&gt;")
-             .replace('"', "&quot;"))
+    return s.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;").replace('"', "&quot;")
 
 
 def _format_summary_value(key: str, val) -> str:
@@ -1751,23 +1868,25 @@ def _render_set(i: int, s: dict) -> str:
             role, role_cls = ("KEEP", "keep") if j == 0 else ("DELETE", "delete")
         else:
             role, role_cls = ("&nbsp;", "")
-        rows.append(f'<tr><td class="role {role_cls}">{role}</td>'
-                    f'<td class="path">{_html_escape(p)}</td></tr>')
+        rows.append(
+            f'<tr><td class="role {role_cls}">{role}</td>'
+            f'<td class="path">{_html_escape(p)}</td></tr>'
+        )
     wasted = s["size"] * (s["count"] - 1)
     return (
         f'<div class="set kind-{s["kind"]}">'
-        f'<h3>Set {i}: <code>{_html_escape(s["name"])}</code> '
+        f"<h3>Set {i}: <code>{_html_escape(s['name'])}</code> "
         f'<span class="badge">{kind_label}</span></h3>'
-        f'<p>{s["count"]} copies, {human_size(s["size"])} each, '
-        f'<strong>{human_size(wasted)} reclaimable</strong></p>'
-        f'<table>{"".join(rows)}</table>'
-        f'</div>'
+        f"<p>{s['count']} copies, {human_size(s['size'])} each, "
+        f"<strong>{human_size(wasted)} reclaimable</strong></p>"
+        f"<table>{''.join(rows)}</table>"
+        f"</div>"
     )
 
 
-def _write_html_report(command: str, root: Path, summary: dict,
-                        duplicate_sets: list[dict],
-                        pre_text: str | None = None) -> Path | None:
+def _write_html_report(
+    command: str, root: Path, summary: dict, duplicate_sets: list[dict], pre_text: str | None = None
+) -> Path | None:
     """Write a self-contained HTML report. Returns the file path, or None on error."""
     try:
         REPORT_DIR.mkdir(parents=True, exist_ok=True)
@@ -1789,7 +1908,7 @@ def _write_html_report(command: str, root: Path, summary: dict,
         body_extra = f'<h2>Output</h2><pre class="tree">{_html_escape(pre_text)}</pre>'
     elif duplicate_sets:
         n = len(duplicate_sets)
-        body_extra = f'<h2>Details ({n} set{"s" if n != 1 else ""})</h2>{set_blocks}'
+        body_extra = f"<h2>Details ({n} set{'s' if n != 1 else ''})</h2>{set_blocks}"
     else:
         body_extra = ""
 
@@ -1816,10 +1935,15 @@ def _write_html_report(command: str, root: Path, summary: dict,
         return None
 
 
-def maybe_write_report(args, command: str, root: Path, summary: dict,
-                        duplicate_sets: list[dict] | None = None,
-                        pre_text: str | None = None,
-                        indent_link: bool = True) -> None:
+def maybe_write_report(
+    args,
+    command: str,
+    root: Path,
+    summary: dict,
+    duplicate_sets: list[dict] | None = None,
+    pre_text: str | None = None,
+    indent_link: bool = True,
+) -> None:
     """Common report-emission tail. No-op if --report wasn't passed."""
     if not getattr(args, "report", False):
         return
@@ -1839,6 +1963,7 @@ def maybe_write_report(args, command: str, root: Path, summary: dict,
 # Commands — shared plumbing
 # ──────────────────────────────────────────────────────────────────────────
 
+
 def _require_dir(p: Path) -> bool:
     """Print error to stderr and return False if `p` isn't a directory."""
     if not p.is_dir():
@@ -1847,8 +1972,9 @@ def _require_dir(p: Path) -> bool:
     return True
 
 
-def _gather_copy_move_plan(src: Path, recursive: bool, pattern: str | None,
-                            overwrite: bool, dst: Path) -> list[tuple[Path, Path, int]]:
+def _gather_copy_move_plan(
+    src: Path, recursive: bool, pattern: str | None, overwrite: bool, dst: Path
+) -> list[tuple[Path, Path, int]]:
     """Build (source, target, size) tuples for copy/move."""
     plan: list[tuple[Path, Path, int]] = []
     if src.is_file():
@@ -1872,8 +1998,9 @@ def _count_skipped_subfolders(src: Path) -> int:
     return sum(1 for p in src.iterdir() if p.is_dir())
 
 
-def _run_copy_or_move(args, *, verb: str, gerund: str, op_key: str,
-                        action: Callable[[Path, Path], None]) -> int:
+def _run_copy_or_move(
+    args, *, verb: str, gerund: str, op_key: str, action: Callable[[Path, Path], None]
+) -> int:
     """Shared body of cmd_copy and cmd_move — only the action callback differs.
 
     `verb` is the imperative form ('copy'/'move') used in user-facing messages.
@@ -1899,8 +2026,7 @@ def _run_copy_or_move(args, *, verb: str, gerund: str, op_key: str,
     total_files = len(plan)
     total_bytes = sum(size for _, _, size in plan)
 
-    if not preflight(op_key, total_files, total_bytes,
-                     assume_yes=args.yes, dry_run=args.dry_run):
+    if not preflight(op_key, total_files, total_bytes, assume_yes=args.yes, dry_run=args.dry_run):
         return 0
 
     # ─── Protection preflight ──────────────────────────────────────────
@@ -1927,8 +2053,7 @@ def _run_copy_or_move(args, *, verb: str, gerund: str, op_key: str,
             )
             dst_install = dst_install_set
             root_warnings.extend(
-                w.replace(str(src), str(dst)) if "specified" in w else w
-                for w in dst_warnings
+                w.replace(str(src), str(dst)) if "specified" in w else w for w in dst_warnings
             )
 
         all_install = src_install | dst_install
@@ -2009,16 +2134,23 @@ def _run_copy_or_move(args, *, verb: str, gerund: str, op_key: str,
 # Commands
 # ──────────────────────────────────────────────────────────────────────────
 
+
 def cmd_copy(args) -> int:
     return _run_copy_or_move(
-        args, verb="copy", gerund="Copying", op_key="copy",
+        args,
+        verb="copy",
+        gerund="Copying",
+        op_key="copy",
         action=lambda src, dst: shutil.copy2(src, dst),
     )
 
 
 def cmd_move(args) -> int:
     return _run_copy_or_move(
-        args, verb="move", gerund="Moving", op_key="move",
+        args,
+        verb="move",
+        gerund="Moving",
+        op_key="move",
         action=lambda src, dst: shutil.move(str(src), str(dst)),
     )
 
@@ -2064,8 +2196,7 @@ def cmd_rename(args) -> int:
         return 0
 
     total_bytes = sum((st.st_size for f, _ in plan if (st := safe_stat(f))))
-    if not preflight("rename", len(plan), total_bytes,
-                     assume_yes=args.yes, dry_run=args.dry_run):
+    if not preflight("rename", len(plan), total_bytes, assume_yes=args.yes, dry_run=args.dry_run):
         return 0
 
     # Protection preflight: rename inside an install folder typically breaks
@@ -2125,6 +2256,7 @@ def cmd_rename(args) -> int:
 # Dedupe — broken into phases for readability
 # ──────────────────────────────────────────────────────────────────────────
 
+
 def _dedupe_quick(args, root: Path) -> int:
     """Metadata-only duplicate scan: groups by (size, name) without reading any
     file content. Fast triage tool — produces a report, never deletes."""
@@ -2165,7 +2297,9 @@ def _dedupe_quick(args, root: Path) -> int:
     if not suspects:
         print("\n  No suspect duplicates found by metadata.")
         maybe_write_report(
-            args, command="dedupe (quick mode)", root=root,
+            args,
+            command="dedupe (quick mode)",
+            root=root,
             summary={
                 "total_files_scanned": total,
                 "suspect_sets": 0,
@@ -2181,22 +2315,30 @@ def _dedupe_quick(args, root: Path) -> int:
 
     print("\n  ─── Quick scan results ───")
     print(f"  Found {len(suspects):,} suspect set(s) by name + size match.")
-    print(f"  Potential space if all suspects were real duplicates: "
-          f"{human_size(potential_savings)} across {total_suspect_files:,} files.\n")
+    print(
+        f"  Potential space if all suspects were real duplicates: "
+        f"{human_size(potential_savings)} across {total_suspect_files:,} files.\n"
+    )
 
     print("  Top 20 suspect sets (sorted by potential savings):")
     for i, ((size, name), files) in enumerate(suspects[:20], start=1):
         wasted = size * (len(files) - 1)
-        print(f"\n  [{i}] '{name}'  ({human_size(size)} each, {len(files)} copies, "
-              f"{human_size(wasted)} reclaimable):")
+        print(
+            f"\n  [{i}] '{name}'  ({human_size(size)} each, {len(files)} copies, "
+            f"{human_size(wasted)} reclaimable):"
+        )
         for f in files:
             print(f"        {f}")
     if len(suspects) > 20:
-        print(f"\n  …and {len(suspects) - 20} more suspect set(s) (run 'standard' "
-              f"or 'paranoid' mode to verify and delete).")
+        print(
+            f"\n  …and {len(suspects) - 20} more suspect set(s) (run 'standard' "
+            f"or 'paranoid' mode to verify and delete)."
+        )
 
     maybe_write_report(
-        args, command="dedupe (quick mode)", root=root,
+        args,
+        command="dedupe (quick mode)",
+        root=root,
         summary={
             "total_files_scanned": total,
             "suspect_sets": len(suspects),
@@ -2204,14 +2346,21 @@ def _dedupe_quick(args, root: Path) -> int:
             "potential_savings_bytes": potential_savings,
         },
         duplicate_sets=[
-            {"name": name, "size": size, "count": len(files),
-             "paths": [str(p) for p in files], "kind": "suspect"}
+            {
+                "name": name,
+                "size": size,
+                "count": len(files),
+                "paths": [str(p) for p in files],
+                "kind": "suspect",
+            }
             for (size, name), files in suspects
         ],
     )
 
-    print("\n  Quick mode never deletes. Re-run with mode 'standard' or "
-          "'paranoid' to verify and remove.")
+    print(
+        "\n  Quick mode never deletes. Re-run with mode 'standard' or "
+        "'paranoid' to verify and remove."
+    )
     return 0
 
 
@@ -2222,8 +2371,10 @@ def _dedupe_find_install_folders(root: Path, args) -> set[Path]:
     print(f"  Looking for installation folders under {root}…")
     detected = find_install_folders(root, args.recursive)
     if detected:
-        print(f"\n  ⚠ Detected {len(detected)} installation folder(s) — "
-              f"their contents will NOT be touched:")
+        print(
+            f"\n  ⚠ Detected {len(detected)} installation folder(s) — "
+            f"their contents will NOT be touched:"
+        )
         for folder, evidence in sorted(detected.items()):
             try:
                 rel = folder.relative_to(root)
@@ -2241,8 +2392,10 @@ def _dedupe_scan_phase(root: Path, args, install_folders: set[Path]):
     min_size_bytes = max(args.min_size, 0) * 1024
     print(f"  Scanning {root}…")
     if min_size_bytes > 0:
-        print(f"  (Skipping files smaller than {human_size(min_size_bytes)} — "
-              f"override with --min-size 0.)")
+        print(
+            f"  (Skipping files smaller than {human_size(min_size_bytes)} — "
+            f"override with --min-size 0.)"
+        )
 
     by_size_normal: dict[int, list[Path]] = defaultdict(list)
     by_size_advisory: dict[int, list[Path]] = defaultdict(list)
@@ -2331,8 +2484,7 @@ def _hash_one_prefix(f: Path) -> tuple[Path, int, str | None, str | None]:
     return (f, min(st.st_size, 65536), ph or None, None)
 
 
-def _hash_one_full(f: Path, cache: HashCache | None
-                   ) -> tuple[Path, int, str | None, str | None]:
+def _hash_one_full(f: Path, cache: HashCache | None) -> tuple[Path, int, str | None, str | None]:
     """Worker: full hash one file (via cache when available)."""
     st = safe_stat(f)
     size = st.st_size if st else 0
@@ -2345,9 +2497,9 @@ def _hash_one_full(f: Path, cache: HashCache | None
     return (f, size, h, None)
 
 
-def _dedupe_hash_candidates(candidates: list[Path], cache: HashCache | None,
-                             workers: int = 1
-                             ) -> dict[str, list[Path]]:
+def _dedupe_hash_candidates(
+    candidates: list[Path], cache: HashCache | None, workers: int = 1
+) -> dict[str, list[Path]]:
     """Stage A (prefix hash) + Stage B (full hash). Returns hash → paths.
 
     `workers` is the resolved thread count (1 = serial). Errors from
@@ -2355,11 +2507,11 @@ def _dedupe_hash_candidates(candidates: list[Path], cache: HashCache | None,
     don't shred the progress bar.
     """
     # ─── Stage A: prefix hash ─────────────────────────────────────────────
-    print(f"  Stage 1/2: quick prefix hash (64 KB per file) to filter candidates"
-          f"{f' (workers={workers})' if workers > 1 else ''}…")
-    prefix_bytes_total = sum(
-        min(st.st_size, 65536) for f in candidates if (st := safe_stat(f))
+    print(
+        f"  Stage 1/2: quick prefix hash (64 KB per file) to filter candidates"
+        f"{f' (workers={workers})' if workers > 1 else ''}…"
     )
+    prefix_bytes_total = sum(min(st.st_size, 65536) for f in candidates if (st := safe_stat(f)))
     bar = ProgressBar(len(candidates), prefix_bytes_total, label="Prefix-hash")
     by_prefix: dict[tuple[int, str], list[Path]] = defaultdict(list)
     errors: list[str] = []
@@ -2393,8 +2545,10 @@ def _dedupe_hash_candidates(candidates: list[Path], cache: HashCache | None,
     bytes_for_full = sum(st.st_size for f in files_for_full if (st := safe_stat(f)))
     eliminated = len(candidates) - len(files_for_full)
     pct = (eliminated / len(candidates)) * 100 if candidates else 0
-    print(f"  Prefix hash eliminated {eliminated:,} files ({pct:.0f}%). "
-          f"Full-hashing remaining {len(files_for_full):,} files ({human_size(bytes_for_full)})…")
+    print(
+        f"  Prefix hash eliminated {eliminated:,} files ({pct:.0f}%). "
+        f"Full-hashing remaining {len(files_for_full):,} files ({human_size(bytes_for_full)})…"
+    )
 
     # ─── Stage B: full SHA-256 ───────────────────────────────────────────
     bar = ProgressBar(len(files_for_full), bytes_for_full, label="Full hash")
@@ -2423,10 +2577,9 @@ def _dedupe_hash_candidates(candidates: list[Path], cache: HashCache | None,
     return hashes
 
 
-def _dedupe_partition_groups(hashes: dict[str, list[Path]],
-                              install_folders: set[Path],
-                              include_unsafe: bool
-                              ) -> tuple[list[list[Path]], list[list[Path]]]:
+def _dedupe_partition_groups(
+    hashes: dict[str, list[Path]], install_folders: set[Path], include_unsafe: bool
+) -> tuple[list[list[Path]], list[list[Path]]]:
     """Split confirmed duplicate groups into normal and advisory."""
     normal_groups: list[list[Path]] = []
     advisory_groups: list[list[Path]] = []
@@ -2448,12 +2601,13 @@ def _dedupe_report_advisory(advisory_groups: list[list[Path]]) -> None:
     if not advisory_groups:
         return
     adv_wasted = sum(
-        (st.st_size if (st := safe_stat(g[0])) else 0) * (len(g) - 1)
-        for g in advisory_groups
+        (st.st_size if (st := safe_stat(g[0])) else 0) * (len(g) - 1) for g in advisory_groups
     )
     print("\n  ─── Advisory: duplicate installer/package files ───")
-    print(f"  Found {len(advisory_groups)} set(s) — {human_size(adv_wasted)} "
-          f"of redundant installers. NOT auto-deleted; review and remove manually.")
+    print(
+        f"  Found {len(advisory_groups)} set(s) — {human_size(adv_wasted)} "
+        f"of redundant installers. NOT auto-deleted; review and remove manually."
+    )
     for i, group in enumerate(advisory_groups, start=1):
         group.sort(key=lambda p: (len(str(p)), str(p)))
         st = safe_stat(group[0])
@@ -2486,9 +2640,13 @@ def ask_deletion_mode(total_victims: int) -> str:
         print("  Not a valid choice.")
 
 
-def _dedupe_execute(normal_groups: list[list[Path]], total_victims: int,
-                     total_wasted: int, args, summary: RunSummary
-                     ) -> tuple[int, int, int]:
+def _dedupe_execute(
+    normal_groups: list[list[Path]],
+    total_victims: int,
+    total_wasted: int,
+    args,
+    summary: RunSummary,
+) -> tuple[int, int, int]:
     """Execute the deletions. Returns (deleted_count, bytes_reclaimed, verify_failures)."""
     if args.dry_run:
         mode = "dry-run"
@@ -2502,8 +2660,10 @@ def _dedupe_execute(normal_groups: list[list[Path]], total_victims: int,
 
     paranoid = getattr(args, "mode", "standard") == "paranoid"
     if paranoid:
-        print("\n  Paranoid mode: each deletion will be confirmed by "
-              "byte-by-byte comparison with the keeper.")
+        print(
+            "\n  Paranoid mode: each deletion will be confirmed by "
+            "byte-by-byte comparison with the keeper."
+        )
     use_trash = bool(getattr(args, "trash", False))
     if use_trash:
         print("  Trash mode: removals go to the OS trash (recoverable).")
@@ -2522,8 +2682,10 @@ def _dedupe_execute(normal_groups: list[list[Path]], total_victims: int,
         st = safe_stat(keeper)
         size = st.st_size if st else 0
 
-        print(f"\n  [Set {i}/{len(normal_groups)}] "
-              f"({human_size(size)} each, {human_size(size * len(victims))} reclaimable):")
+        print(
+            f"\n  [Set {i}/{len(normal_groups)}] "
+            f"({human_size(size)} each, {human_size(size * len(victims))} reclaimable):"
+        )
         print(f"    KEEP   {keeper}")
 
         for v in victims:
@@ -2538,8 +2700,10 @@ def _dedupe_execute(normal_groups: list[list[Path]], total_victims: int,
                     continue
             if paranoid and not files_are_identical(keeper, v):
                 verify_failures += 1
-                msg = ("binary verification FAILED — files are NOT byte-identical "
-                       "despite matching hashes (highly unusual; not removed)")
+                msg = (
+                    "binary verification FAILED — files are NOT byte-identical "
+                    "despite matching hashes (highly unusual; not removed)"
+                )
                 print(f"      ! {msg}", file=sys.stderr)
                 summary.fail(str(v), msg)
                 continue
@@ -2564,14 +2728,17 @@ def _dedupe_execute(normal_groups: list[list[Path]], total_victims: int,
 
     if mode == "dry-run":
         verb = "would trash" if use_trash else "would reclaim"
-        print(f"\n  {verb.capitalize()} {human_size(total_wasted)} across {len(normal_groups)} set(s).")
+        print(
+            f"\n  {verb.capitalize()} {human_size(total_wasted)} across {len(normal_groups)} set(s)."
+        )
     else:
         verb = "Trashed" if use_trash else "Deleted"
-        print(f"\n  {verb} {deleted:,} of {total_victims:,} file(s), "
-              f"reclaimed {human_size(bytes_reclaimed)}.")
+        print(
+            f"\n  {verb} {deleted:,} of {total_victims:,} file(s), "
+            f"reclaimed {human_size(bytes_reclaimed)}."
+        )
         if verify_failures:
-            print(f"  ⚠ {verify_failures} file(s) failed binary verification "
-                  f"and were preserved.")
+            print(f"  ⚠ {verify_failures} file(s) failed binary verification and were preserved.")
         summary.print_summary()
 
     return deleted, bytes_reclaimed, verify_failures
@@ -2607,16 +2774,15 @@ def cmd_dedupe(args) -> int:
         print("\n  No size-matched candidates — nothing to dedupe.")
         return 0
 
-    files_to_hash = (
-        [f for g in normal_candidates for f in g]
-        + [f for g in advisory_candidates for f in g]
-    )
+    files_to_hash = [f for g in normal_candidates for f in g] + [
+        f for g in advisory_candidates for f in g
+    ]
     bytes_to_hash = sum(st.st_size for f in files_to_hash if (st := safe_stat(f)))
-    print(f"\n  Found {len(files_to_hash):,} files with matching sizes "
-          f"({human_size(bytes_to_hash)}).")
+    print(
+        f"\n  Found {len(files_to_hash):,} files with matching sizes ({human_size(bytes_to_hash)})."
+    )
 
-    if not preflight("hash", len(files_to_hash), bytes_to_hash,
-                     assume_yes=args.yes, dry_run=False):
+    if not preflight("hash", len(files_to_hash), bytes_to_hash, assume_yes=args.yes, dry_run=False):
         return 0
 
     use_cache = not getattr(args, "no_cache", False)
@@ -2642,7 +2808,9 @@ def cmd_dedupe(args) -> int:
         print("  No deletable duplicates found.")
         # Even with no normal groups, advisory ones may warrant a report.
         maybe_write_report(
-            args, command=f"dedupe ({mode} mode)", root=root,
+            args,
+            command=f"dedupe ({mode} mode)",
+            root=root,
             summary={
                 "duplicate_sets_found": 0,
                 "advisory_sets_found": len(advisory_groups),
@@ -2651,11 +2819,13 @@ def cmd_dedupe(args) -> int:
                 "verification_failures": 0,
             },
             duplicate_sets=[
-                {"name": g[0].name,
-                 "size": (st.st_size if (st := safe_stat(g[0])) else 0),
-                 "count": len(g),
-                 "paths": [str(p) for p in g],
-                 "kind": "advisory"}
+                {
+                    "name": g[0].name,
+                    "size": (st.st_size if (st := safe_stat(g[0])) else 0),
+                    "count": len(g),
+                    "paths": [str(p) for p in g],
+                    "kind": "advisory",
+                }
                 for g in advisory_groups
             ],
         )
@@ -2663,8 +2833,7 @@ def cmd_dedupe(args) -> int:
 
     total_victims = sum(len(g) - 1 for g in normal_groups)
     total_wasted = sum(
-        (st.st_size if (st := safe_stat(g[0])) else 0) * (len(g) - 1)
-        for g in normal_groups
+        (st.st_size if (st := safe_stat(g[0])) else 0) * (len(g) - 1) for g in normal_groups
     )
     print(f"  ─── Found {len(normal_groups)} duplicate set(s) ───")
     print(f"  {total_victims:,} file(s) can be deleted, reclaiming {human_size(total_wasted)}.")
@@ -2676,7 +2845,9 @@ def cmd_dedupe(args) -> int:
         )
 
         maybe_write_report(
-            args, command=f"dedupe ({mode} mode)", root=root,
+            args,
+            command=f"dedupe ({mode} mode)",
+            root=root,
             summary={
                 "duplicate_sets_found": len(normal_groups),
                 "advisory_sets_found": len(advisory_groups),
@@ -2685,18 +2856,26 @@ def cmd_dedupe(args) -> int:
                 "verification_failures": verify_failures,
             },
             duplicate_sets=(
-                [{"name": g[0].name,
-                  "size": (st.st_size if (st := safe_stat(g[0])) else 0),
-                  "count": len(g),
-                  "paths": [str(p) for p in g],
-                  "kind": "duplicate"}
-                 for g in normal_groups]
-                + [{"name": g[0].name,
-                    "size": (st.st_size if (st := safe_stat(g[0])) else 0),
-                    "count": len(g),
-                    "paths": [str(p) for p in g],
-                    "kind": "advisory"}
-                   for g in advisory_groups]
+                [
+                    {
+                        "name": g[0].name,
+                        "size": (st.st_size if (st := safe_stat(g[0])) else 0),
+                        "count": len(g),
+                        "paths": [str(p) for p in g],
+                        "kind": "duplicate",
+                    }
+                    for g in normal_groups
+                ]
+                + [
+                    {
+                        "name": g[0].name,
+                        "size": (st.st_size if (st := safe_stat(g[0])) else 0),
+                        "count": len(g),
+                        "paths": [str(p) for p in g],
+                        "kind": "advisory",
+                    }
+                    for g in advisory_groups
+                ]
             ),
         )
         return 0 if not summary.failed else 1
@@ -2713,8 +2892,7 @@ def cmd_name_clash(args) -> int:
     if file_count == 0:
         print("Nothing matched.")
         return 0
-    if not preflight("name-clash", file_count, total_bytes,
-                     assume_yes=args.yes, dry_run=False):
+    if not preflight("name-clash", file_count, total_bytes, assume_yes=args.yes, dry_run=False):
         return 0
 
     # Group files by the key the user picked.
@@ -2756,7 +2934,7 @@ def cmd_name_clash(args) -> int:
             differ_groups += 1
 
         print(f"\n  '{name}'  ({len(files)} copies, {marker})")
-        rows.sort(key=lambda r: (r[2] or 0), reverse=True)
+        rows.sort(key=lambda r: r[2] or 0, reverse=True)
         for f, size, mtime in rows:
             if size is None:
                 print(f"      [unreadable]  {f}")
@@ -2766,18 +2944,29 @@ def cmd_name_clash(args) -> int:
 
         if getattr(args, "report", False):
             rep_size = max(sizes) if sizes else 0
-            report_sets.append({
-                "name": name, "size": rep_size, "count": len(files),
-                "paths": [str(p) for p in files], "kind": "suspect",
-            })
+            report_sets.append(
+                {
+                    "name": name,
+                    "size": rep_size,
+                    "count": len(files),
+                    "paths": [str(p) for p in files],
+                    "kind": "suspect",
+                }
+            )
 
-    print(f"\n{len(clashes)} name collision(s): "
-          f"{identical_groups} with matching sizes, {differ_groups} with differing sizes.")
-    print("(This is a report only — nothing was changed. "
-          "Use `dedupe` if you want to remove byte-identical copies.)")
+    print(
+        f"\n{len(clashes)} name collision(s): "
+        f"{identical_groups} with matching sizes, {differ_groups} with differing sizes."
+    )
+    print(
+        "(This is a report only — nothing was changed. "
+        "Use `dedupe` if you want to remove byte-identical copies.)"
+    )
 
     maybe_write_report(
-        args, command="name-clash", root=root,
+        args,
+        command="name-clash",
+        root=root,
         summary={
             "total_files_scanned": file_count,
             "collisions_found": len(clashes),
@@ -2808,8 +2997,9 @@ def cmd_organize(args) -> int:
         return 0
 
     total_bytes = sum(st.st_size for f in to_move if (st := safe_stat(f)))
-    if not preflight("organize", len(to_move), total_bytes,
-                     assume_yes=args.yes, dry_run=args.dry_run):
+    if not preflight(
+        "organize", len(to_move), total_bytes, assume_yes=args.yes, dry_run=args.dry_run
+    ):
         return 0
 
     # ─── Protection preflight ──────────────────────────────────────────
@@ -2903,8 +3093,7 @@ def cmd_search(args) -> int:
     if scanned_count == 0:
         print("Nothing matched.")
         return 0
-    if not preflight("search", scanned_count, scanned_bytes,
-                     assume_yes=args.yes, dry_run=False):
+    if not preflight("search", scanned_count, scanned_bytes, assume_yes=args.yes, dry_run=False):
         return 0
 
     matches.sort(key=lambda r: r[1], reverse=True)
@@ -2915,22 +3104,29 @@ def cmd_search(args) -> int:
 
     if getattr(args, "report", False):
         criteria_parts = []
-        if args.pattern:    criteria_parts.append(f"pattern={args.pattern}")
-        if args.ext:        criteria_parts.append(f"ext={args.ext}")
-        if args.min_size:   criteria_parts.append(f"min={args.min_size} KB")
-        if args.max_size:   criteria_parts.append(f"max={args.max_size} KB")
-        if args.newer_than: criteria_parts.append(f"newer than {args.newer_than}d")
-        if args.older_than: criteria_parts.append(f"older than {args.older_than}d")
+        if args.pattern:
+            criteria_parts.append(f"pattern={args.pattern}")
+        if args.ext:
+            criteria_parts.append(f"ext={args.ext}")
+        if args.min_size:
+            criteria_parts.append(f"min={args.min_size} KB")
+        if args.max_size:
+            criteria_parts.append(f"max={args.max_size} KB")
+        if args.newer_than:
+            criteria_parts.append(f"newer than {args.newer_than}d")
+        if args.older_than:
+            criteria_parts.append(f"older than {args.older_than}d")
         maybe_write_report(
-            args, command="search", root=root,
+            args,
+            command="search",
+            root=root,
             summary={
                 "criteria": ", ".join(criteria_parts) if criteria_parts else "(no filters)",
                 "matches_found": len(matches),
                 "total_bytes": sum(size for _, size, _ in matches),
             },
             duplicate_sets=[
-                {"name": f.name, "size": size, "count": 1,
-                 "paths": [str(f)], "kind": "match"}
+                {"name": f.name, "size": size, "count": 1, "paths": [str(f)], "kind": "match"}
                 for f, size, _ in matches
             ],
         )
@@ -2945,8 +3141,7 @@ def cmd_tree(args) -> int:
 
     if root.is_dir():
         file_count, total_bytes = prescan_directory(root, recursive=True)
-        if not preflight("tree", file_count, total_bytes,
-                         assume_yes=args.yes, dry_run=False):
+        if not preflight("tree", file_count, total_bytes, assume_yes=args.yes, dry_run=False):
             return 0
 
     captured_lines: list[str] = []
@@ -2980,7 +3175,9 @@ def cmd_tree(args) -> int:
 
     if want_report:
         maybe_write_report(
-            args, command="tree", root=root,
+            args,
+            command="tree",
+            root=root,
             summary={
                 "max_depth": str(args.max_depth) if args.max_depth else "(unlimited)",
                 "lines_in_tree": len(captured_lines),
@@ -3023,8 +3220,7 @@ def cmd_clean(args) -> int:
         return 0
 
     # ─── Phase 2: time-estimate preflight ────────────────────────────────
-    if not preflight("clean", len(plan), 0,
-                     assume_yes=args.yes, dry_run=args.dry_run):
+    if not preflight("clean", len(plan), 0, assume_yes=args.yes, dry_run=args.dry_run):
         return 0
 
     # ─── Phase 3: installation-protection preflight (option C) ───────────
@@ -3120,8 +3316,7 @@ def cmd_stats(args) -> int:
     if total_count == 0:
         print(f"\n  Directory: {root}\n  (empty)")
         return 0
-    if not preflight("stats", total_count, total_bytes,
-                     assume_yes=args.yes, dry_run=False):
+    if not preflight("stats", total_count, total_bytes, assume_yes=args.yes, dry_run=False):
         return 0
 
     print(f"\n  Directory: {root}")
@@ -3164,6 +3359,7 @@ def cmd_stats(args) -> int:
 # rename-then-move; reverse-order undo handles it.)
 # ──────────────────────────────────────────────────────────────────────────
 
+
 def _list_undo_logs(args) -> int:
     """`cardo undo --list`: show recent undoable runs."""
     logs = find_recent_undo_logs()
@@ -3182,14 +3378,15 @@ def _list_undo_logs(args) -> int:
         completed = header.get("completed") or "(incomplete)"
         argv = header.get("argv", [])
         argv_str = " ".join(shlex.quote(a) for a in argv)
-        print(f"  {i:>2}. {status}  {len(entries):>4} action(s)  "
-              f"{completed}  {header.get('command', '?')}")
+        print(
+            f"  {i:>2}. {status}  {len(entries):>4} action(s)  "
+            f"{completed}  {header.get('command', '?')}"
+        )
         print(f"        argv: {argv_str}")
         print(f"        file: {path.name}")
     print()
     print("  Use `cardo undo` to reverse the most recent available run.")
-    print("  Use `cardo restore <file>` to selectively reverse entries from "
-          "any run.")
+    print("  Use `cardo restore <file>` to selectively reverse entries from any run.")
     return 0
 
 
@@ -3199,8 +3396,8 @@ def _undo_one_entry(entry: dict, args) -> tuple[bool, str]:
 
     if op == "move" or op == "rename":
         # Both have the same shape: from → to, and we move to back to from.
-        src = Path(entry["to"])      # current location
-        dst = Path(entry["from"])    # original location
+        src = Path(entry["to"])  # current location
+        dst = Path(entry["from"])  # original location
         if not src.exists():
             return (False, f"current location no longer exists: {src}")
         if dst.exists() and not args.force:
@@ -3273,8 +3470,10 @@ def cmd_undo(args) -> int:
     print(f"    argv:       {argv_str}")
     print(f"    completed:  {completed}")
     if already_done:
-        print(f"    actions:    {len(pending):,} pending "
-              f"({len(already_done):,} already reversed via `restore`)")
+        print(
+            f"    actions:    {len(pending):,} pending "
+            f"({len(already_done):,} already reversed via `restore`)"
+        )
     else:
         print(f"    actions:    {len(entries):,}")
     print()
@@ -3312,7 +3511,7 @@ def cmd_undo(args) -> int:
                 summary.fail(
                     f"{entry.get('op')}: "
                     f"{entry.get('to') or entry.get('path') or entry.get('from')}",
-                    msg
+                    msg,
                 )
                 sys.stderr.write(f"  ✗ {msg}\n")
         summary.print_summary()
@@ -3343,6 +3542,7 @@ def cmd_undo(args) -> int:
 # they don't reappear in subsequent restore or undo runs. Once every entry
 # in a log is consumed, the full `undone` flag flips to true.
 # ──────────────────────────────────────────────────────────────────────────
+
 
 def _entry_describe(entry: dict) -> str:
     """One-line human-readable summary of an undo log entry."""
@@ -3420,13 +3620,14 @@ def _restore_resolve_log(args) -> tuple[Path, dict, list[dict]] | None:
         if any(i not in already for i in range(len(entries))):
             return (path, header, entries)
 
-    print("  No undo logs with pending entries. Run `cardo undo --list` "
-          "to see history.", file=sys.stderr)
+    print(
+        "  No undo logs with pending entries. Run `cardo undo --list` to see history.",
+        file=sys.stderr,
+    )
     return None
 
 
-def _restore_interactive_pick(entries: list[dict],
-                                already_done: set[int]) -> list[int] | None:
+def _restore_interactive_pick(entries: list[dict], already_done: set[int]) -> list[int] | None:
     """Show the entries and let the user select some by range syntax.
     Returns the list of 0-based indices to undo, or None if cancelled."""
     print()
@@ -3458,14 +3659,12 @@ def _restore_interactive_pick(entries: list[dict],
         # Filter out already-done entries silently.
         picked = [i for i in picked if i not in already_done]
         if not picked:
-            print("  All selected entries were already reversed. Pick others, "
-                  "or 'q' to cancel.")
+            print("  All selected entries were already reversed. Pick others, or 'q' to cancel.")
             continue
         return picked
 
 
-def _restore_grep_pick(entries: list[dict], pattern: str,
-                        already_done: set[int]) -> list[int]:
+def _restore_grep_pick(entries: list[dict], pattern: str, already_done: set[int]) -> list[int]:
     """Select entries whose source-or-destination path matches `pattern`."""
     picked: list[int] = []
     for i, entry in enumerate(entries):
@@ -3510,8 +3709,10 @@ def cmd_restore(args) -> int:
     print(f"    command:    cardo {cmd_label}")
     print(f"    argv:       {argv_str}")
     print(f"    completed:  {completed}")
-    print(f"    entries:    {len(entries):,} total  ({pending_count:,} pending, "
-          f"{len(already_done):,} already reversed)")
+    print(
+        f"    entries:    {len(entries):,} total  ({pending_count:,} pending, "
+        f"{len(already_done):,} already reversed)"
+    )
 
     # ─── Pick entries ────────────────────────────────────────────────
     if args.range_:
@@ -3567,7 +3768,7 @@ def cmd_restore(args) -> int:
                 summary.fail(
                     f"{entry.get('op')}: "
                     f"{entry.get('to') or entry.get('path') or entry.get('from')}",
-                    msg
+                    msg,
                 )
                 sys.stderr.write(f"  ✗ {msg}\n")
         summary.print_summary()
@@ -3594,6 +3795,7 @@ def cmd_restore(args) -> int:
 # This shares the cache with `dedupe` — if you've ever dedupe'd a tree, you
 # already have a baseline of expected hashes for verify to compare against.
 # ──────────────────────────────────────────────────────────────────────────
+
 
 def _cache_lookup_unchecked(cache: HashCache, path: Path) -> dict | None:
     """Return the raw cache entry for `path` without the size/mtime freshness
@@ -3646,11 +3848,12 @@ def _verify_one(path: Path, cache: HashCache) -> tuple[Path, str, str | None]:
     same_mtime = mtime_diff <= 2.0
     same_metadata = same_size and same_mtime
     if same_metadata:
-        return (path, "corrupted",
-                f"hash {entry.get('sha256','?')[:12]}… → {new_hash[:12]}… "
-                f"(size & mtime unchanged)")
-    return (path, "modified",
-            "hash differs and metadata changed since last seen")
+        return (
+            path,
+            "corrupted",
+            f"hash {entry.get('sha256', '?')[:12]}… → {new_hash[:12]}… (size & mtime unchanged)",
+        )
+    return (path, "modified", "hash differs and metadata changed since last seen")
 
 
 def cmd_verify(args) -> int:
@@ -3659,22 +3862,20 @@ def cmd_verify(args) -> int:
         return 1
 
     # ─── Preflight: estimate cost (full hashing is expensive) ───────────
-    file_count, total_bytes = prescan_directory(root, recursive=args.recursive,
-                                                 pattern=args.pattern)
+    file_count, total_bytes = prescan_directory(
+        root, recursive=args.recursive, pattern=args.pattern
+    )
     if file_count == 0:
         print("Nothing matched.")
         return 0
-    if not preflight("hash", file_count, total_bytes,
-                     assume_yes=args.yes, dry_run=False):
+    if not preflight("hash", file_count, total_bytes, assume_yes=args.yes, dry_run=False):
         return 0
 
     # ─── Load the cache ─────────────────────────────────────────────────
     cache = HashCache()
     if not cache.data and not args.add_new:
-        print("  ! Cache is empty and --no-add-new was passed — nothing to "
-              "verify against.")
-        print("    Run `cardo dedupe <tree>` first, or omit --no-add-new to "
-              "establish a baseline.")
+        print("  ! Cache is empty and --no-add-new was passed — nothing to verify against.")
+        print("    Run `cardo dedupe <tree>` first, or omit --no-add-new to establish a baseline.")
         return 1
     if cache.data:
         print(f"  Cache loaded with {len(cache.data):,} previously seen file(s).")
@@ -3682,8 +3883,10 @@ def cmd_verify(args) -> int:
     # ─── Hash everything in parallel (reusing dedupe's workers) ─────────
     workers = _resolve_workers(getattr(args, "workers", 0))
     files = list(iter_files(root, recursive=args.recursive, pattern=args.pattern))
-    print(f"  Hashing {len(files):,} file(s) "
-          f"{'(workers=' + str(workers) + ')' if workers > 1 else '(serial)'}…")
+    print(
+        f"  Hashing {len(files):,} file(s) "
+        f"{'(workers=' + str(workers) + ')' if workers > 1 else '(serial)'}…"
+    )
     bar = ProgressBar(len(files), total_bytes, label="Verify")
 
     results: list[tuple[Path, str, str | None]] = []
@@ -3727,11 +3930,11 @@ def cmd_verify(args) -> int:
     for path, status, detail in results:
         by_status[status].append((path, detail))
 
-    ok_count       = len(by_status["ok"])
-    new_count      = len(by_status["new"])
+    ok_count = len(by_status["ok"])
+    new_count = len(by_status["new"])
     modified_count = len(by_status["modified"])
-    corrupted      = by_status["corrupted"]
-    unreadable     = by_status["unreadable"]
+    corrupted = by_status["corrupted"]
+    unreadable = by_status["unreadable"]
 
     # Populate cache with new files if requested.
     if args.add_new and new_count:
@@ -3753,15 +3956,18 @@ def cmd_verify(args) -> int:
         verb = "added to cache" if args.add_new else "not in cache"
         print(f"    + New:          {new_count:,}  ({verb})")
     if modified_count:
-        print(f"    ~ Modified:     {modified_count:,}  (size or mtime changed; expected for edited files)")
+        print(
+            f"    ~ Modified:     {modified_count:,}  (size or mtime changed; expected for edited files)"
+        )
     if corrupted:
-        print(f"    ⚠ CORRUPTED:    {len(corrupted):,}  "
-              f"(content differs but metadata didn't — investigate!)")
+        print(
+            f"    ⚠ CORRUPTED:    {len(corrupted):,}  "
+            f"(content differs but metadata didn't — investigate!)"
+        )
     if unreadable:
         print(f"    ! Unreadable:   {len(unreadable):,}")
     if orphans:
-        print(f"    – Missing:      {len(orphans):,}  "
-              f"(in cache but no longer on disk)")
+        print(f"    – Missing:      {len(orphans):,}  (in cache but no longer on disk)")
 
     # Always show details for the alarming categories.
     if corrupted:
@@ -3800,22 +4006,39 @@ def cmd_verify(args) -> int:
         # can render it. The 'kind' drives the colored stripe.
         report_sets: list[dict] = []
         for path, detail in corrupted:
-            report_sets.append({
-                "name": path.name, "size": 0, "count": 1,
-                "paths": [str(path)], "kind": "duplicate",  # red stripe = bad
-            })
+            report_sets.append(
+                {
+                    "name": path.name,
+                    "size": 0,
+                    "count": 1,
+                    "paths": [str(path)],
+                    "kind": "duplicate",  # red stripe = bad
+                }
+            )
         for path, _ in by_status["modified"]:
-            report_sets.append({
-                "name": path.name, "size": 0, "count": 1,
-                "paths": [str(path)], "kind": "suspect",
-            })
+            report_sets.append(
+                {
+                    "name": path.name,
+                    "size": 0,
+                    "count": 1,
+                    "paths": [str(path)],
+                    "kind": "suspect",
+                }
+            )
         for path in orphans:
-            report_sets.append({
-                "name": path.name, "size": 0, "count": 1,
-                "paths": [str(path)], "kind": "advisory",
-            })
+            report_sets.append(
+                {
+                    "name": path.name,
+                    "size": 0,
+                    "count": 1,
+                    "paths": [str(path)],
+                    "kind": "advisory",
+                }
+            )
         maybe_write_report(
-            args, command="verify", root=root,
+            args,
+            command="verify",
+            root=root,
             summary={
                 "total_checked": len(files),
                 "unchanged": ok_count,
@@ -3855,14 +4078,15 @@ def cmd_verify(args) -> int:
 # ──────────────────────────────────────────────────────────────────────────
 
 # Action types in the sync plan.
-_SYNC_COPY    = "copy"     # new file: src has it, dst doesn't
-_SYNC_UPDATE  = "update"   # exists in both, content/metadata differ
-_SYNC_DELETE  = "delete"   # extra in dst, will be removed (only if --mirror)
-_SYNC_SKIP    = "skip"     # exists in both, identical — no action
+_SYNC_COPY = "copy"  # new file: src has it, dst doesn't
+_SYNC_UPDATE = "update"  # exists in both, content/metadata differ
+_SYNC_DELETE = "delete"  # extra in dst, will be removed (only if --mirror)
+_SYNC_SKIP = "skip"  # exists in both, identical — no action
 
 
-def _sync_compare(src_path: Path, dst_path: Path, *, use_hash: bool,
-                   cache: HashCache | None) -> tuple[bool, str]:
+def _sync_compare(
+    src_path: Path, dst_path: Path, *, use_hash: bool, cache: HashCache | None
+) -> tuple[bool, str]:
     """Return (needs_update, reason). If True, dst should be replaced by src."""
     src_st = safe_stat(src_path)
     dst_st = safe_stat(dst_path)
@@ -3897,8 +4121,9 @@ def _sync_compare(src_path: Path, dst_path: Path, *, use_hash: bool,
     return (False, "mtime+size match")
 
 
-def _sync_build_plan(src: Path, dst: Path, args, cache: HashCache | None
-                     ) -> tuple[list[tuple[str, Path, Path]], list[tuple[Path, str]]]:
+def _sync_build_plan(
+    src: Path, dst: Path, args, cache: HashCache | None
+) -> tuple[list[tuple[str, Path, Path]], list[tuple[Path, str]]]:
     """Walk both trees and build the action plan.
 
     Returns (plan, warnings). Plan entries are (action, src_rel_path, dst_rel_path).
@@ -3926,8 +4151,7 @@ def _sync_build_plan(src: Path, dst: Path, args, cache: HashCache | None
             # a dir, etc.) — refuse to touch it.
             warnings.append((dst_file, "destination is not a regular file"))
             continue
-        needs, reason = _sync_compare(src_file, dst_file,
-                                       use_hash=args.checksum, cache=cache)
+        needs, reason = _sync_compare(src_file, dst_file, use_hash=args.checksum, cache=cache)
         if needs:
             plan.append((_SYNC_UPDATE, src_file, dst_file))
         else:
@@ -4003,10 +4227,10 @@ def cmd_sync(args) -> int:
         if len(warnings) > 5:
             print(f"      … and {len(warnings) - 5} more")
 
-    copies   = [e for e in plan if e[0] == _SYNC_COPY]
-    updates  = [e for e in plan if e[0] == _SYNC_UPDATE]
-    deletes  = [e for e in plan if e[0] == _SYNC_DELETE]
-    skips    = [e for e in plan if e[0] == _SYNC_SKIP]
+    copies = [e for e in plan if e[0] == _SYNC_COPY]
+    updates = [e for e in plan if e[0] == _SYNC_UPDATE]
+    deletes = [e for e in plan if e[0] == _SYNC_DELETE]
+    skips = [e for e in plan if e[0] == _SYNC_SKIP]
 
     # Bytes to copy = new files + updated files (source side).
     total_bytes = 0
@@ -4040,9 +4264,7 @@ def cmd_sync(args) -> int:
         dst_install_set: set[Path] = set()
         dst_warn: list[str] = []
         if dst.exists() and dst.is_dir():
-            dst_install_set, dst_warn = detect_install_folders_with_root_check(
-                dst, recursive=True
-            )
+            dst_install_set, dst_warn = detect_install_folders_with_root_check(dst, recursive=True)
         all_install = src_install | dst_install_set
         root_warnings = src_warn + dst_warn
 
@@ -4076,18 +4298,16 @@ def cmd_sync(args) -> int:
         ):
             return 0
         actionable_plan = safe
-        copies  = [e for e in safe if e[0] == _SYNC_COPY]
+        copies = [e for e in safe if e[0] == _SYNC_COPY]
         updates = [e for e in safe if e[0] == _SYNC_UPDATE]
         deletes = [e for e in safe if e[0] == _SYNC_DELETE]
         total_bytes = sum(
-            (st.st_size if (st := safe_stat(s)) else 0)
-            for _, s, _ in copies + updates
+            (st.st_size if (st := safe_stat(s)) else 0) for _, s, _ in copies + updates
         )
 
     # ─── Time-estimate preflight ─────────────────────────────────────
     total_files = len(copies) + len(updates) + len(deletes)
-    if not preflight("copy", total_files, total_bytes,
-                     assume_yes=args.yes, dry_run=args.dry_run):
+    if not preflight("copy", total_files, total_bytes, assume_yes=args.yes, dry_run=args.dry_run):
         return 0
 
     # ─── Dry-run output ──────────────────────────────────────────────
@@ -4113,7 +4333,7 @@ def cmd_sync(args) -> int:
 
         # Copy + update.
         for action, src_p, dst_p in copies + updates:
-            size = (st.st_size if (st := safe_stat(src_p)) else 0)
+            size = st.st_size if (st := safe_stat(src_p)) else 0
             try:
                 dst_p.parent.mkdir(parents=True, exist_ok=True)
                 if args.follow_symlinks:
@@ -4161,36 +4381,55 @@ def cmd_sync(args) -> int:
 # CLI plumbing
 # ──────────────────────────────────────────────────────────────────────────
 
+
 def _add_common(sp, *, with_pattern: bool = True, with_recursive: bool = True) -> None:
     """Flags shared by most write-style commands."""
     if with_pattern:
         sp.add_argument("-p", "--pattern", help="Glob filter, e.g. '*.jpg'")
     if with_recursive:
-        sp.add_argument("-r", "--recursive", action="store_true",
-                        help="Descend into subdirectories")
-    sp.add_argument("-n", "--dry-run", action="store_true",
-                    help="Preview without changing anything")
-    sp.add_argument("-i", "--interactive", action="store_true",
-                    help="Confirm each file")
-    sp.add_argument("-y", "--yes", action="store_true",
-                    help="Skip the time-estimate confirmation prompt")
-    sp.add_argument("--log", nargs="?", const="", default=None, metavar="PATH",
-                    help="Write a log of every action. With no value, logs to ~/.cardo/logs/")
-    sp.add_argument("--no-undo", action="store_true",
-                    help="Skip writing the undo log for this run. Use when you "
-                         "definitely won't want to reverse the operation later.")
-    sp.add_argument("--include-unsafe", action="store_true",
-                    help="Bypass the installation-folder protection check. "
-                         "NOT recommended — destructive ops inside .app bundles, "
-                         "Adobe/Maxon-style folders etc. can break installed software.")
+        sp.add_argument(
+            "-r", "--recursive", action="store_true", help="Descend into subdirectories"
+        )
+    sp.add_argument(
+        "-n", "--dry-run", action="store_true", help="Preview without changing anything"
+    )
+    sp.add_argument("-i", "--interactive", action="store_true", help="Confirm each file")
+    sp.add_argument(
+        "-y", "--yes", action="store_true", help="Skip the time-estimate confirmation prompt"
+    )
+    sp.add_argument(
+        "--log",
+        nargs="?",
+        const="",
+        default=None,
+        metavar="PATH",
+        help="Write a log of every action. With no value, logs to ~/.cardo/logs/",
+    )
+    sp.add_argument(
+        "--no-undo",
+        action="store_true",
+        help="Skip writing the undo log for this run. Use when you "
+        "definitely won't want to reverse the operation later.",
+    )
+    sp.add_argument(
+        "--include-unsafe",
+        action="store_true",
+        help="Bypass the installation-folder protection check. "
+        "NOT recommended — destructive ops inside .app bundles, "
+        "Adobe/Maxon-style folders etc. can break installed software.",
+    )
 
 
 def _add_yes_and_report(sp) -> None:
     """For read-only commands that don't take --dry-run/--interactive/--log."""
-    sp.add_argument("-y", "--yes", action="store_true",
-                    help="Skip the time-estimate confirmation prompt")
-    sp.add_argument("--report", action="store_true",
-                    help="Save an HTML report of the findings to ~/.cardo/reports/.")
+    sp.add_argument(
+        "-y", "--yes", action="store_true", help="Skip the time-estimate confirmation prompt"
+    )
+    sp.add_argument(
+        "--report",
+        action="store_true",
+        help="Save an HTML report of the findings to ~/.cardo/reports/.",
+    )
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -4205,8 +4444,9 @@ def build_parser() -> argparse.ArgumentParser:
     sp = sub.add_parser("copy", help="Copy files to a destination")
     sp.add_argument("source")
     sp.add_argument("dest")
-    sp.add_argument("--overwrite", action="store_true",
-                    help="Overwrite existing files (default: rename)")
+    sp.add_argument(
+        "--overwrite", action="store_true", help="Overwrite existing files (default: rename)"
+    )
     _add_common(sp)
     sp.set_defaults(func=cmd_copy)
 
@@ -4221,16 +4461,24 @@ def build_parser() -> argparse.ArgumentParser:
     # rename
     sp = sub.add_parser("rename", help="Bulk-rename files")
     sp.add_argument("directory")
-    sp.add_argument("--regex", nargs=2, metavar=("PATTERN", "REPLACEMENT"),
-                    help="Apply regex substitution to the stem")
+    sp.add_argument(
+        "--regex",
+        nargs=2,
+        metavar=("PATTERN", "REPLACEMENT"),
+        help="Apply regex substitution to the stem",
+    )
     sp.add_argument("--prefix", help="Prepend to stem")
     sp.add_argument("--suffix", help="Append to stem")
     sp.add_argument("--lower", action="store_true", help="Lowercase the stem")
     sp.add_argument("--upper", action="store_true", help="Uppercase the stem")
-    sp.add_argument("--numbered", metavar="TEMPLATE",
-                    help="Replace stem with a numbered template, e.g. 'photo_{:03d}'")
-    sp.add_argument("--start", type=int, default=1,
-                    help="Starting number for --numbered (default 1)")
+    sp.add_argument(
+        "--numbered",
+        metavar="TEMPLATE",
+        help="Replace stem with a numbered template, e.g. 'photo_{:03d}'",
+    )
+    sp.add_argument(
+        "--start", type=int, default=1, help="Starting number for --numbered (default 1)"
+    )
     sp.add_argument("--ext", help="Replace extension (empty string to strip)")
     sp.add_argument("--overwrite", action="store_true")
     _add_common(sp)
@@ -4239,39 +4487,70 @@ def build_parser() -> argparse.ArgumentParser:
     # dedupe
     sp = sub.add_parser("dedupe", help="Find and remove duplicates by content hash")
     sp.add_argument("directory")
-    sp.add_argument("--mode", choices=["quick", "standard", "paranoid"],
-                    default="standard",
-                    help="Scan mode. 'quick' = metadata-only triage (no hashing, "
-                         "no deletion). 'standard' = staged SHA-256 (default). "
-                         "'paranoid' = staged SHA-256 + byte-by-byte verification "
-                         "of every deletion before it happens.")
-    sp.add_argument("--min-size", type=int, default=4, metavar="KB",
-                    help="Skip files smaller than this many KB (default: 4 KB). "
-                         "Small files clog up the count but reclaim very little space.")
-    sp.add_argument("--include-empty", action="store_true",
-                    help="Include 0-byte files (skipped by default).")
-    sp.add_argument("--no-cache", action="store_true",
-                    help="Disable the persistent hash cache (~/.cardo/cache/).")
-    sp.add_argument("--report", action="store_true",
-                    help="Write an HTML report to ~/.cardo/reports/ at the end.")
-    sp.add_argument("--workers", type=int, default=0, metavar="N",
-                    help="Parallel hashing workers (0 = auto: min(8, CPU count); "
-                         "1 = serial). Hashing parallelizes well on modern SSDs.")
-    sp.add_argument("--trash", action="store_true",
-                    help="Send duplicates to the OS trash instead of unlinking. "
-                         "Requires the `send2trash` package.")
+    sp.add_argument(
+        "--mode",
+        choices=["quick", "standard", "paranoid"],
+        default="standard",
+        help="Scan mode. 'quick' = metadata-only triage (no hashing, "
+        "no deletion). 'standard' = staged SHA-256 (default). "
+        "'paranoid' = staged SHA-256 + byte-by-byte verification "
+        "of every deletion before it happens.",
+    )
+    sp.add_argument(
+        "--min-size",
+        type=int,
+        default=4,
+        metavar="KB",
+        help="Skip files smaller than this many KB (default: 4 KB). "
+        "Small files clog up the count but reclaim very little space.",
+    )
+    sp.add_argument(
+        "--include-empty", action="store_true", help="Include 0-byte files (skipped by default)."
+    )
+    sp.add_argument(
+        "--no-cache",
+        action="store_true",
+        help="Disable the persistent hash cache (~/.cardo/cache/).",
+    )
+    sp.add_argument(
+        "--report",
+        action="store_true",
+        help="Write an HTML report to ~/.cardo/reports/ at the end.",
+    )
+    sp.add_argument(
+        "--workers",
+        type=int,
+        default=0,
+        metavar="N",
+        help="Parallel hashing workers (0 = auto: min(8, CPU count); "
+        "1 = serial). Hashing parallelizes well on modern SSDs.",
+    )
+    sp.add_argument(
+        "--trash",
+        action="store_true",
+        help="Send duplicates to the OS trash instead of unlinking. "
+        "Requires the `send2trash` package.",
+    )
     # Note: --include-unsafe is added by _add_common(sp) below.
     _add_common(sp)
     sp.set_defaults(func=cmd_dedupe)
 
     # name-clash
-    sp = sub.add_parser("name-clash", help="Report files sharing a name across the tree (read-only)")
+    sp = sub.add_parser(
+        "name-clash", help="Report files sharing a name across the tree (read-only)"
+    )
     sp.add_argument("directory")
     sp.add_argument("-p", "--pattern", help="Glob filter, e.g. '*.jpg'")
-    sp.add_argument("--ignore-ext", action="store_true",
-                    help="Match on stem only, ignoring extension (e.g. 'photo.jpg' vs 'photo.png')")
-    sp.add_argument("--ignore-case", action="store_true",
-                    help="Treat 'Photo.JPG' and 'photo.jpg' as the same name")
+    sp.add_argument(
+        "--ignore-ext",
+        action="store_true",
+        help="Match on stem only, ignoring extension (e.g. 'photo.jpg' vs 'photo.png')",
+    )
+    sp.add_argument(
+        "--ignore-case",
+        action="store_true",
+        help="Treat 'Photo.JPG' and 'photo.jpg' as the same name",
+    )
     _add_yes_and_report(sp)
     sp.set_defaults(func=cmd_name_clash)
 
@@ -4288,10 +4567,8 @@ def build_parser() -> argparse.ArgumentParser:
     sp.add_argument("--ext", help="Filter by extension")
     sp.add_argument("--min-size", type=int, help="Minimum size in KB")
     sp.add_argument("--max-size", type=int, help="Maximum size in KB")
-    sp.add_argument("--newer-than", type=float, metavar="DAYS",
-                    help="Modified within N days")
-    sp.add_argument("--older-than", type=float, metavar="DAYS",
-                    help="Not modified for N days")
+    sp.add_argument("--newer-than", type=float, metavar="DAYS", help="Modified within N days")
+    sp.add_argument("--older-than", type=float, metavar="DAYS", help="Not modified for N days")
     _add_yes_and_report(sp)
     sp.set_defaults(func=cmd_search)
 
@@ -4306,19 +4583,33 @@ def build_parser() -> argparse.ArgumentParser:
     sp = sub.add_parser("clean", help="Remove empty subdirectories")
     sp.add_argument("directory")
     sp.add_argument("-n", "--dry-run", action="store_true")
-    sp.add_argument("-y", "--yes", action="store_true",
-                    help="Skip the time-estimate confirmation prompt")
-    sp.add_argument("--trash", action="store_true",
-                    help="Send empty directories to the OS trash instead of "
-                         "rmdir'ing them. Requires the `send2trash` package.")
-    sp.add_argument("--log", nargs="?", const="", default=None, metavar="PATH",
-                    help="Write a log of every action. With no value, logs to ~/.cardo/logs/")
-    sp.add_argument("--no-undo", action="store_true",
-                    help="Skip writing the undo log for this run.")
-    sp.add_argument("--include-unsafe", action="store_true",
-                    help="Bypass the installation-folder protection check. "
-                         "NOT recommended — empty subdirs of .app bundles, "
-                         "Adobe/Maxon-style folders, etc. will be removed.")
+    sp.add_argument(
+        "-y", "--yes", action="store_true", help="Skip the time-estimate confirmation prompt"
+    )
+    sp.add_argument(
+        "--trash",
+        action="store_true",
+        help="Send empty directories to the OS trash instead of "
+        "rmdir'ing them. Requires the `send2trash` package.",
+    )
+    sp.add_argument(
+        "--log",
+        nargs="?",
+        const="",
+        default=None,
+        metavar="PATH",
+        help="Write a log of every action. With no value, logs to ~/.cardo/logs/",
+    )
+    sp.add_argument(
+        "--no-undo", action="store_true", help="Skip writing the undo log for this run."
+    )
+    sp.add_argument(
+        "--include-unsafe",
+        action="store_true",
+        help="Bypass the installation-folder protection check. "
+        "NOT recommended — empty subdirs of .app bundles, "
+        "Adobe/Maxon-style folders, etc. will be removed.",
+    )
     sp.set_defaults(func=cmd_clean)
 
     # stats
@@ -4334,111 +4625,183 @@ def build_parser() -> argparse.ArgumentParser:
     sub_cfg.add_parser("show", help="Print effective settings and source")
     sub_cfg.add_parser("path", help="Print the config file path")
     init_sp = sub_cfg.add_parser("init", help="Write a starter config file")
-    init_sp.add_argument("--force", action="store_true",
-                         help="Overwrite an existing config file")
+    init_sp.add_argument("--force", action="store_true", help="Overwrite an existing config file")
     sp.set_defaults(func=cmd_config)
 
     # undo — reverse the most recent reversible run
-    sp = sub.add_parser("undo",
-                        help="Reverse the most recent move/rename/organize/clean run")
-    sp.add_argument("--list", action="store_true",
-                    help="Show recent undo logs without doing anything")
-    sp.add_argument("-n", "--dry-run", action="store_true",
-                    help="Show what would be reversed without changing anything")
-    sp.add_argument("-y", "--yes", action="store_true",
-                    help="Skip the confirmation prompt")
-    sp.add_argument("--force", action="store_true",
-                    help="Overwrite destinations that already exist when reversing")
-    sp.add_argument("--log", nargs="?", const="", default=None, metavar="PATH",
-                    help="Write a human-readable log of the undo run")
+    sp = sub.add_parser("undo", help="Reverse the most recent move/rename/organize/clean run")
+    sp.add_argument(
+        "--list", action="store_true", help="Show recent undo logs without doing anything"
+    )
+    sp.add_argument(
+        "-n",
+        "--dry-run",
+        action="store_true",
+        help="Show what would be reversed without changing anything",
+    )
+    sp.add_argument("-y", "--yes", action="store_true", help="Skip the confirmation prompt")
+    sp.add_argument(
+        "--force",
+        action="store_true",
+        help="Overwrite destinations that already exist when reversing",
+    )
+    sp.add_argument(
+        "--log",
+        nargs="?",
+        const="",
+        default=None,
+        metavar="PATH",
+        help="Write a human-readable log of the undo run",
+    )
     sp.set_defaults(func=cmd_undo)
 
     # restore — selective per-entry undo
-    sp = sub.add_parser("restore",
-                        help="Selectively reverse individual entries from any "
-                             "past run's undo log")
-    sp.add_argument("log_file", nargs="?", default=None,
-                    help="Undo log filename (in ~/.cardo/undo/) or full path. "
-                         "If omitted, uses the most recent pending log.")
-    sp.add_argument("--list", action="store_true",
-                    help="Show recent undo logs without doing anything")
-    sp.add_argument("--range", dest="range_", metavar="SPEC",
-                    help="Select entries by range, e.g. '1-5, 8, 11-15'. "
-                         "Skips the interactive picker.")
-    sp.add_argument("--grep", metavar="PATTERN",
-                    help="Select entries whose source or destination path "
-                         "matches a glob pattern (e.g. '*.jpg'). Skips the "
-                         "interactive picker.")
-    sp.add_argument("-n", "--dry-run", action="store_true",
-                    help="Show what would be reversed without changing anything")
-    sp.add_argument("-y", "--yes", action="store_true",
-                    help="Skip the confirmation prompt")
-    sp.add_argument("--force", action="store_true",
-                    help="Overwrite destinations that already exist when reversing")
-    sp.add_argument("--log", nargs="?", const="", default=None, metavar="PATH",
-                    help="Write a human-readable log of the restore run")
+    sp = sub.add_parser(
+        "restore", help="Selectively reverse individual entries from any past run's undo log"
+    )
+    sp.add_argument(
+        "log_file",
+        nargs="?",
+        default=None,
+        help="Undo log filename (in ~/.cardo/undo/) or full path. "
+        "If omitted, uses the most recent pending log.",
+    )
+    sp.add_argument(
+        "--list", action="store_true", help="Show recent undo logs without doing anything"
+    )
+    sp.add_argument(
+        "--range",
+        dest="range_",
+        metavar="SPEC",
+        help="Select entries by range, e.g. '1-5, 8, 11-15'. Skips the interactive picker.",
+    )
+    sp.add_argument(
+        "--grep",
+        metavar="PATTERN",
+        help="Select entries whose source or destination path "
+        "matches a glob pattern (e.g. '*.jpg'). Skips the "
+        "interactive picker.",
+    )
+    sp.add_argument(
+        "-n",
+        "--dry-run",
+        action="store_true",
+        help="Show what would be reversed without changing anything",
+    )
+    sp.add_argument("-y", "--yes", action="store_true", help="Skip the confirmation prompt")
+    sp.add_argument(
+        "--force",
+        action="store_true",
+        help="Overwrite destinations that already exist when reversing",
+    )
+    sp.add_argument(
+        "--log",
+        nargs="?",
+        const="",
+        default=None,
+        metavar="PATH",
+        help="Write a human-readable log of the restore run",
+    )
     sp.set_defaults(func=cmd_restore)
 
     # verify — re-hash files and compare against the persistent cache
-    sp = sub.add_parser("verify",
-                        help="Re-hash files and compare against the persistent "
-                             "hash cache (detect bit-rot / corruption)")
+    sp = sub.add_parser(
+        "verify",
+        help="Re-hash files and compare against the persistent "
+        "hash cache (detect bit-rot / corruption)",
+    )
     sp.add_argument("directory")
-    sp.add_argument("-r", "--recursive", action="store_true",
-                    help="Descend into subdirectories")
-    sp.add_argument("-p", "--pattern",
-                    help="Glob filter, e.g. '*.tif'")
-    sp.add_argument("-y", "--yes", action="store_true",
-                    help="Skip the time-estimate confirmation prompt")
-    sp.add_argument("--workers", type=int, default=0, metavar="N",
-                    help="Parallel hashing workers (0 = auto: min(8, CPU count); "
-                         "1 = serial). Same model as dedupe.")
-    sp.add_argument("--no-add-new", dest="add_new", action="store_false",
-                    default=True,
-                    help="Don't add untracked files to the cache. Default is to "
-                         "add them so the next verify run can check them.")
-    sp.add_argument("--show-modified", action="store_true",
-                    help="List the paths of modified files in the report "
-                         "(default: just count them).")
-    sp.add_argument("--show-missing", action="store_true",
-                    help="List the paths of missing (orphaned) files in the report.")
-    sp.add_argument("--report", action="store_true",
-                    help="Write an HTML report to ~/.cardo/reports/.")
+    sp.add_argument("-r", "--recursive", action="store_true", help="Descend into subdirectories")
+    sp.add_argument("-p", "--pattern", help="Glob filter, e.g. '*.tif'")
+    sp.add_argument(
+        "-y", "--yes", action="store_true", help="Skip the time-estimate confirmation prompt"
+    )
+    sp.add_argument(
+        "--workers",
+        type=int,
+        default=0,
+        metavar="N",
+        help="Parallel hashing workers (0 = auto: min(8, CPU count); "
+        "1 = serial). Same model as dedupe.",
+    )
+    sp.add_argument(
+        "--no-add-new",
+        dest="add_new",
+        action="store_false",
+        default=True,
+        help="Don't add untracked files to the cache. Default is to "
+        "add them so the next verify run can check them.",
+    )
+    sp.add_argument(
+        "--show-modified",
+        action="store_true",
+        help="List the paths of modified files in the report (default: just count them).",
+    )
+    sp.add_argument(
+        "--show-missing",
+        action="store_true",
+        help="List the paths of missing (orphaned) files in the report.",
+    )
+    sp.add_argument(
+        "--report", action="store_true", help="Write an HTML report to ~/.cardo/reports/."
+    )
     sp.set_defaults(func=cmd_verify)
 
     # sync — one-way mirror src → dst
-    sp = sub.add_parser("sync",
-                        help="One-way mirror: make destination match source")
+    sp = sub.add_parser("sync", help="One-way mirror: make destination match source")
     sp.add_argument("source")
     sp.add_argument("dest")
     sp.add_argument("-p", "--pattern", help="Glob filter, e.g. '*.jpg'")
-    sp.add_argument("-c", "--checksum", action="store_true",
-                    help="Compare by SHA-256 content hash instead of mtime+size. "
-                         "Definitive but reads every byte.")
-    sp.add_argument("--mirror", action="store_true",
-                    help="Also delete files in destination that aren't in source "
-                         "(so dst exactly mirrors src). Without this, sync only "
-                         "adds new files and updates existing ones.")
-    sp.add_argument("--trash", action="store_true",
-                    help="When --mirror deletes extras, send them to the OS "
-                         "trash instead of unlinking permanently. Requires "
-                         "the `send2trash` package.")
-    sp.add_argument("--follow-symlinks", action="store_true",
-                    help="Dereference symlinks in the source instead of "
-                         "copying them as symlinks.")
-    sp.add_argument("--no-cache", action="store_true",
-                    help="Disable the persistent hash cache (only relevant "
-                         "with --checksum).")
-    sp.add_argument("-n", "--dry-run", action="store_true",
-                    help="Preview without changing anything")
-    sp.add_argument("-y", "--yes", action="store_true",
-                    help="Skip the time-estimate confirmation prompt")
-    sp.add_argument("--log", nargs="?", const="", default=None, metavar="PATH",
-                    help="Write a log of every action. With no value, logs to "
-                         "~/.cardo/logs/")
-    sp.add_argument("--include-unsafe", action="store_true",
-                    help="Bypass the installation-folder protection check. "
-                         "NOT recommended.")
+    sp.add_argument(
+        "-c",
+        "--checksum",
+        action="store_true",
+        help="Compare by SHA-256 content hash instead of mtime+size. "
+        "Definitive but reads every byte.",
+    )
+    sp.add_argument(
+        "--mirror",
+        action="store_true",
+        help="Also delete files in destination that aren't in source "
+        "(so dst exactly mirrors src). Without this, sync only "
+        "adds new files and updates existing ones.",
+    )
+    sp.add_argument(
+        "--trash",
+        action="store_true",
+        help="When --mirror deletes extras, send them to the OS "
+        "trash instead of unlinking permanently. Requires "
+        "the `send2trash` package.",
+    )
+    sp.add_argument(
+        "--follow-symlinks",
+        action="store_true",
+        help="Dereference symlinks in the source instead of copying them as symlinks.",
+    )
+    sp.add_argument(
+        "--no-cache",
+        action="store_true",
+        help="Disable the persistent hash cache (only relevant with --checksum).",
+    )
+    sp.add_argument(
+        "-n", "--dry-run", action="store_true", help="Preview without changing anything"
+    )
+    sp.add_argument(
+        "-y", "--yes", action="store_true", help="Skip the time-estimate confirmation prompt"
+    )
+    sp.add_argument(
+        "--log",
+        nargs="?",
+        const="",
+        default=None,
+        metavar="PATH",
+        help="Write a log of every action. With no value, logs to ~/.cardo/logs/",
+    )
+    sp.add_argument(
+        "--include-unsafe",
+        action="store_true",
+        help="Bypass the installation-folder protection check. NOT recommended.",
+    )
     sp.set_defaults(func=cmd_sync)
 
     return p
@@ -4490,14 +4853,12 @@ def main(argv: list[str] | None = None) -> int:
         # Visibility: if assume_yes is being forced from config, tell the user
         # once so they don't wonder why the "Proceed?" prompt is missing.
         if CONFIG.assume_yes and CONFIG.overrides.get("defaults.assume_yes") is True:
-            user_passed_yes = (
-                "--yes" in explicit_flags
-                or any(a == "-y" or (a.startswith("-") and not a.startswith("--") and "y" in a[1:])
-                       for a in (argv if argv is not None else sys.argv[1:]))
+            user_passed_yes = "--yes" in explicit_flags or any(
+                a == "-y" or (a.startswith("-") and not a.startswith("--") and "y" in a[1:])
+                for a in (argv if argv is not None else sys.argv[1:])
             )
             if not user_passed_yes:
-                print("  (config: assume_yes=true — skipping confirmations)",
-                      file=sys.stderr)
+                print("  (config: assume_yes=true — skipping confirmations)", file=sys.stderr)
 
     try:
         return args.func(args)
