@@ -1,0 +1,113 @@
+# GitHub Actions CI for cardo.
+#
+# Runs on every push to main and on every pull request. Two jobs:
+#   - lint:  ruff check across the codebase
+#   - test:  smoke tests on Python 3.11, 3.12, 3.13 across Linux/macOS/Windows
+#
+# Smoke tests don't yet require a tests/ directory — they invoke cardo's
+# subcommands against a temp directory and check exit codes. As the test
+# suite grows in tests/, switch the `Smoke test` step to `pytest`.
+
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:  # manual trigger from the Actions tab
+
+# Cancel in-progress runs on the same branch when a new push lands.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+
+  lint:
+    name: Lint (ruff)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Install ruff
+        run: pip install "ruff>=0.4"
+
+      - name: ruff check
+        run: ruff check cardo.py
+
+      - name: ruff format --check
+        run: ruff format --check cardo.py
+
+  test:
+    name: Test (Python ${{ matrix.python-version }}, ${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+        python-version: ["3.11", "3.12", "3.13"]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: pip
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          # Install cardo in editable mode with trash support so --trash
+          # path code gets exercised.
+          pip install -e ".[dev]"
+
+      - name: Verify cardo is importable
+        run: python -c "import cardo; print('cardo loaded OK')"
+
+      - name: Verify --help works
+        run: cardo --help
+
+      - name: Smoke test (read-only commands)
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/cardo-smoke/sub
+          echo "hello world" > /tmp/cardo-smoke/a.txt
+          echo "another file" > /tmp/cardo-smoke/b.md
+          echo "code"          > /tmp/cardo-smoke/sub/c.py
+
+          cardo stats /tmp/cardo-smoke -r
+          cardo tree  /tmp/cardo-smoke
+          cardo search /tmp/cardo-smoke -r --min-size 1
+          cardo name-clash /tmp/cardo-smoke
+
+      - name: Smoke test (destructive commands, dry-run only)
+        shell: bash
+        run: |
+          set -euo pipefail
+          # We don't run destructive commands for real in CI to avoid
+          # heisenbug debugging when one fails on one runner. Dry-run is
+          # enough to cover the planning and protection-preflight paths.
+          cardo organize /tmp/cardo-smoke -r -n
+          cardo dedupe   /tmp/cardo-smoke -r -n --mode quick
+          cardo clean    /tmp/cardo-smoke -n
+          cardo rename   /tmp/cardo-smoke --prefix "X_" -r -n
+          cardo verify   /tmp/cardo-smoke -r -y
+
+      - name: Run pytest if tests/ exists
+        shell: bash
+        run: |
+          if [ -d tests ]; then
+            pytest tests/ -v
+          else
+            echo "No tests/ directory yet — skipping."
+          fi

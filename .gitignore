@@ -1,0 +1,80 @@
+# ─── Python ───────────────────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# Virtual environments
+.env
+.venv
+env/
+venv/
+ENV/
+
+# Tooling
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.coverage
+.coverage.*
+htmlcov/
+.tox/
+
+# ─── IDEs / editors ───────────────────────────────────────────────────
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# ─── OS ───────────────────────────────────────────────────────────────
+.DS_Store
+.AppleDouble
+.LSOverride
+Icon
+._*
+.DocumentRevisions-V100
+.fseventsd
+.Spotlight-V100
+.TemporaryItems
+.Trashes
+.VolumeIcon.icns
+.com.apple.timemachine.donotpresent
+Thumbs.db
+ehthumbs.db
+desktop.ini
+
+# ─── Cardo's own runtime artifacts ────────────────────────────────────
+# A developer running cardo against test fixtures will end up with these.
+# They contain real-world hashes / logs / reports from local runs and
+# shouldn't end up in commits.
+.cardo/
+test_output/
+*.cardo.bak
+
+# Reports cardo writes into the working directory if --report is used
+# with an explicit path
+cardo_*.html
+
+# Local config overrides
+.envrc
+.tool-versions

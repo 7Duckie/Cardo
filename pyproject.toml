@@ -1,0 +1,98 @@
+# pyproject.toml — Python packaging metadata for Cardo.
+#
+# Install in editable mode while developing:
+#   pip install -e .
+#
+# Build a wheel:
+#   python -m build
+#
+# Publish (after configuring credentials):
+#   python -m twine upload dist/*
+
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "cardo"
+version = "1.0.0"
+description = "A friendly, careful command-line file manager."
+readme = "README.md"
+requires-python = ">=3.11"
+license = { file = "LICENSE" }
+authors = [
+    { name = "The Cardo Authors" },
+]
+keywords = [
+    "filesystem",
+    "file-manager",
+    "deduplication",
+    "cli",
+    "organize",
+    "rsync",
+    "bit-rot",
+    "backup",
+]
+classifiers = [
+    "Development Status :: 5 - Production/Stable",
+    "Environment :: Console",
+    "Intended Audience :: End Users/Desktop",
+    "Intended Audience :: System Administrators",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: System :: Archiving",
+    "Topic :: System :: Filesystems",
+    "Topic :: Utilities",
+]
+
+# Cardo is intentionally single-file. The only optional runtime dep is
+# send2trash, declared as an extra so users who don't want trash support
+# (or are on a system where send2trash doesn't install cleanly) can still
+# use cardo without pulling it in.
+dependencies = []
+
+[project.optional-dependencies]
+trash = ["send2trash>=1.8"]
+dev   = [
+    "send2trash>=1.8",
+    "ruff>=0.4",
+    "pytest>=8.0",
+]
+
+[project.scripts]
+cardo = "cardo:main"
+
+[project.urls]
+Homepage      = "https://github.com/7Duckie/cardo"
+Documentation = "https://github.com/7Duckie/cardo/tree/main/docs"
+Repository    = "https://github.com/7Duckie/cardo"
+Issues        = "https://github.com/7Duckie/cardo/issues"
+Changelog     = "https://github.com/7Duckie/cardo/blob/main/CHANGELOG.md"
+
+[tool.setuptools]
+# Single-file module; not a package.
+py-modules = ["cardo"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.ruff.lint]
+select = [
+    "E",   # pycodestyle errors
+    "W",   # pycodestyle warnings
+    "F",   # pyflakes
+    "B",   # flake8-bugbear
+    "UP",  # pyupgrade
+    "SIM", # flake8-simplify
+    "C4",  # flake8-comprehensions
+]
+ignore = [
+    "E501",   # line-too-long — handled by formatter
+    "B008",   # function call in argument defaults — fine for argparse helpers
+    "SIM108", # ternary instead of if/else — sometimes the if/else is clearer
+]
