@@ -1,36 +1,26 @@
 # Installation
 
-Cardo runs on Python 3.11 or newer. Pick the installation path that suits
-how you'll use it.
+Pick the install path that suits how you'll use cardo. All three end with
+a working `cardo` command on your `PATH`.
 
-## Requirements
-
-- **Python 3.11+** — needed for the `tomllib` module (stdlib, used to read
-  the config file). Cardo will not run on older Python.
-- **`send2trash` (optional but recommended)** — enables the `--trash` flag
-  on every destructive command. Without it, `--trash` is rejected and
-  destructive ops permanently unlink files.
-
-That's it. No other runtime dependencies. Cardo is one file plus its
-optional trash dep.
-
-## Option 1: Install as a package (recommended)
+## Option 1: Install from GitHub (recommended for most people)
 
 ```bash
-pip install cardo
+pip install git+https://github.com/7Duckie/cardo.git
 ```
 
-This puts a `cardo` command on your `PATH`. To also install trash support:
+That's the whole thing. Then:
 
 ```bash
-pip install "cardo[trash]"
+cardo --help                          # see all commands
+cardo stats ~/Downloads               # try it on a folder
 ```
 
-Then anywhere:
+For trash support (recommended — files go to OS trash instead of being
+permanently deleted), also install:
 
 ```bash
-cardo --help
-cardo stats ~/Downloads
+pip install send2trash
 ```
 
 ## Option 2: Run the single file directly

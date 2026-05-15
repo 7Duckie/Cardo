@@ -4838,8 +4838,50 @@ def _detect_explicit_flags(argv: list[str] | None) -> set[str]:
         found.add(name)
     return found
 
+def print_welcome() -> None:
+    """Friendly intro when `cardo` is run with no arguments.
+
+    argparse's default "the following arguments are required: command" is
+    correct but unwelcoming. This replaces it with a short orientation:
+    what cardo does, the few commands a new user is most likely to want,
+    and where to learn more.
+    """
+    print("""
+  Cardo — a careful command-line file manager.
+
+  Cardo organizes, deduplicates, and tidies up files with safety rails:
+  every destructive operation previews what it'll do, and most actions
+  can be undone.
+
+  Try one of these to get started:
+
+    cardo stats ~/Downloads              # see what's in a folder
+    cardo tree ~/Downloads               # show its structure
+    cardo organize ~/Downloads -n        # preview organizing it (no changes)
+    cardo dedupe ~/Pictures -r --mode quick    # find duplicates, read-only
+
+  Every command has detailed help:
+    cardo <command> --help
+
+  All commands:
+    cardo --help
+
+  Documentation:
+    https://github.com/7Duckie/cardo/tree/main/docs
+""")
 
 def main(argv: list[str] | None = None) -> int:
+    # If invoked with no arguments at all, show a friendly welcome instead
+    # of argparse's terse "the following arguments are required" error.
+    # We check sys.argv directly when argv wasn't passed in, mirroring how
+    # argparse would have read it.
+    if argv is None and len(sys.argv) == 1:
+        print_welcome()
+        return 0
+    if argv is not None and len(argv) == 0:
+        print_welcome()
+        return 0
+
     # Load config first; this affects defaults but never overrides explicit CLI flags.
     global CONFIG
     CONFIG = load_config()

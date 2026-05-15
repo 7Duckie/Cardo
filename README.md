@@ -1,15 +1,52 @@
 # Cardo
 
-> A friendly, careful command-line file manager.
+> A command-line file manager that asks before it breaks things.
 
-In Roman towns, the **cardo** was the principal north-south street — the
-organizing spine from which everything else was navigated. Cardo the program
-is the same idea applied to a filesystem: a single command-line tool for
-moving along the spine of your files, with the safety rails to do so without
-disaster.
+Cardo helps you organize, deduplicate, verify, and tidy up files from the
+terminal — with safety rails. Every destructive operation previews what
+it'll do, refuses to touch installed-application content by default, and
+writes an undo log you can reverse later.
 
+[![CI](https://github.com/YOUR-USERNAME/cardo/actions/workflows/ci.yml/badge.svg)](https://github.com/YOUR-USERNAME/cardo/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Python: 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/downloads/)
+
+---
+
+## 60-second tour
+
+Install:
+
+```bash
+pip install git+https://github.com/7Duckie/cardo.git
+```
+
+See what's in a folder:
+
+```bash
+cardo stats ~/Downloads
+```
+
+Preview organizing it (no changes made):
+
+```bash
+cardo organize ~/Downloads -n
+```
+
+If the preview looks right, run it for real:
+
+```bash
+cardo organize ~/Downloads
+```
+
+Made a mistake?
+
+```bash
+cardo undo
+```
+
+That's the whole loop: preview → do → undo. Every destructive command
+follows it.
 
 ---
 
@@ -46,8 +83,8 @@ It does these things with three opinions running through every command:
 ## Quick start
 
 ```bash
-# Install
-pip install cardo
+# Install from GitHub
+pip install git+https://github.com/7Duckie/cardo.git
 
 # Or, if you'd rather have a single self-contained script:
 curl -O https://raw.githubusercontent.com/7Duckie/cardo/main/cardo.py
@@ -336,8 +373,8 @@ See [docs/installation.md](docs/installation.md) for full details. Short
 version:
 
 ```bash
-# As a package
-pip install cardo
+# As a package, from GitHub
+pip install git+https://github.com/7Duckie/cardo.git
 
 # Or download the script and run directly
 curl -O https://raw.githubusercontent.com/7Duckie/cardo/main/cardo.py
