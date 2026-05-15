@@ -1,0 +1,13 @@
+# Pre-commit hooks for cardo.
+#
+# Install once:    pre-commit install
+# Run manually:    pre-commit run --all-files
+# Update versions: pre-commit autoupdate
+
+repos:
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.4.0    # pinned version; bump occasionally with `autoupdate`
+    hooks:
+      - id: ruff
+        args: [--fix]
+      - id: ruff-format
