@@ -77,7 +77,7 @@ if sys.stdout.encoding and sys.stdout.encoding.lower() != "utf-8":
         sys.stderr.reconfigure(encoding="utf-8", errors="replace")
     except (AttributeError, OSError):
         pass  # very old Python or non-standard streams — fall through
-    
+
 # ──────────────────────────────────────────────────────────────────────────
 # Constants & lightweight helpers
 # ──────────────────────────────────────────────────────────────────────────
