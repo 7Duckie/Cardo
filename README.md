@@ -7,7 +7,7 @@ terminal — with safety rails. Every destructive operation previews what
 it'll do, refuses to touch installed-application content by default, and
 writes an undo log you can reverse later.
 
-[![CI](https://github.com/YOUR-USERNAME/cardo/actions/workflows/ci.yml/badge.svg)](https://github.com/YOUR-USERNAME/cardo/actions/workflows/ci.yml)
+[![CI](https://github.com/7Duckie/cardo/actions/workflows/ci.yml/badge.svg)](https://github.com/YOUR-USERNAME/cardo/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Python: 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/downloads/)
 
