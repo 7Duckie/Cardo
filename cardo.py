@@ -67,7 +67,17 @@ except ImportError:
     _send2trash_impl = None  # type: ignore[assignment]
     _TRASH_AVAILABLE = False
 
-
+# Force UTF-8 on stdout/stderr so the Unicode glyphs we use for output
+# (→, ✓, ✗, ⚠, ─, etc.) work on Windows terminals that default to cp1252.
+# Python 3.7+ supports reconfigure(); we use errors="replace" so any
+# truly un-encodable character falls back to '?' instead of crashing.
+if sys.stdout.encoding and sys.stdout.encoding.lower() != "utf-8":
+    try:
+        sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+        sys.stderr.reconfigure(encoding="utf-8", errors="replace")
+    except (AttributeError, OSError):
+        pass  # very old Python or non-standard streams — fall through
+    
 # ──────────────────────────────────────────────────────────────────────────
 # Constants & lightweight helpers
 # ──────────────────────────────────────────────────────────────────────────
