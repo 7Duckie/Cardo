@@ -303,7 +303,7 @@ CONFIG: Config = Config()
 def _coerce(value: Any, kind: type, key: str) -> Any:
     """Light type-checking for config values. Bad types print a warning and
     fall back to the default rather than crashing."""
-    if isinstance(value, kind):
+    if isinstance(value | kind):
         return value
     print(
         f"  ! config: {key} should be {kind.__name__}, got "
@@ -1863,9 +1863,9 @@ def _html_escape(s: str) -> str:
 
 
 def _format_summary_value(key: str, val) -> str:
-    if "bytes" in key.lower() and isinstance(val, (int, float)):
+    if "bytes" in key.lower() and isinstance(val, (int | float)):
         return human_size(int(val))
-    if isinstance(val, int):
+    if isinstance(val | int):
         return f"{val:,}"
     return str(val)
 
@@ -4838,6 +4838,7 @@ def _detect_explicit_flags(argv: list[str] | None) -> set[str]:
         found.add(name)
     return found
 
+
 def print_welcome() -> None:
     """Friendly intro when `cardo` is run with no arguments.
 
@@ -4869,6 +4870,7 @@ def print_welcome() -> None:
   Documentation:
     https://github.com/7Duckie/cardo/tree/main/docs
 """)
+
 
 def main(argv: list[str] | None = None) -> int:
     # If invoked with no arguments at all, show a friendly welcome instead
