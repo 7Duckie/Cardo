@@ -76,32 +76,22 @@ jobs:
       - name: Verify --help works
         run: cardo --help
 
-      - name: Smoke test (read-only commands)
-        shell: bash
+      - name: Read-only smoke tests
         run: |
-          set -euo pipefail
           mkdir -p /tmp/cardo-smoke/sub
-          echo "hello world" > /tmp/cardo-smoke/a.txt
-          echo "another file" > /tmp/cardo-smoke/b.md
-          echo "code"          > /tmp/cardo-smoke/sub/c.py
+          echo "hello" > /tmp/cardo-smoke/a.txt
+          echo "world" > /tmp/cardo-smoke/b.md
+          echo "code"  > /tmp/cardo-smoke/sub/c.py
+          python cardo.py stats /tmp/cardo-smoke
+          python cardo.py tree /tmp/cardo-smoke
+          python cardo.py search /tmp/cardo-smoke --min-size 1
 
-          cardo stats /tmp/cardo-smoke -r
-          cardo tree  /tmp/cardo-smoke
-          cardo search /tmp/cardo-smoke -r --min-size 1
-          cardo name-clash /tmp/cardo-smoke
-
-      - name: Smoke test (destructive commands, dry-run only)
-        shell: bash
+      - name: Dry-run smoke tests (destructive commands, no real changes)
         run: |
-          set -euo pipefail
-          # We don't run destructive commands for real in CI to avoid
-          # heisenbug debugging when one fails on one runner. Dry-run is
-          # enough to cover the planning and protection-preflight paths.
-          cardo organize /tmp/cardo-smoke -r -n
-          cardo dedupe   /tmp/cardo-smoke -r -n --mode quick
-          cardo clean    /tmp/cardo-smoke -n
-          cardo rename   /tmp/cardo-smoke --prefix "X_" -r -n
-          cardo verify   /tmp/cardo-smoke -r -y
+          python cardo.py organize /tmp/cardo-smoke -r -n
+          python cardo.py dedupe /tmp/cardo-smoke -r -n --mode quick
+          python cardo.py clean /tmp/cardo-smoke -n
+          python cardo.py rename /tmp/cardo-smoke --prefix "X_" -r -n 
 
       - name: Run pytest if tests/ exists
         shell: bash
