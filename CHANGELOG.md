@@ -4,6 +4,25 @@ All notable changes to Cardo will be documented in this file. The format is
 based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and this
 project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.1] — 2026-05-15
+
+### Added
+- Friendly welcome message when `cardo` is run with no arguments
+  (instead of argparse's terse "command is required" error).
+
+### Fixed
+- Force UTF-8 encoding for stdout/stderr so Unicode glyphs (→, ✓,
+  ⚠, etc.) render correctly on Windows terminals that default to
+  cp1252.
+
+### Development
+- Added `.pre-commit-config.yaml` with ruff format + lint hooks.
+- Applied `ruff format` and various ruff lint fixes throughout
+  `cardo.py`. No semantic changes.
+
+[1.0.1]: https://github.com/7Duckie/Cardo/releases/tag/v1.0.1
+[1.0.0]: https://github.com/7Duckie/Cardo/releases/tag/v1.0.0
+
 ## [1.0.0] — 2026-05-14
 
 Initial public release. Cardo is a one-file, fifteen-command file manager
